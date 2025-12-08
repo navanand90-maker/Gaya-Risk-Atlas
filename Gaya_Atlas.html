@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Risk Atlas - Gaya District</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --primary-dark: #1e3a8a; /* Deep Royal Blue */
+            --primary-light: #3b82f6; /* Bright Blue */
+            --accent-color: #f59e0b; /* Amber for highlights */
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* --- Sidebar Styling --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--primary-dark) 0%, #111827 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+
+        .nav-links {
+            list-style: none;
+        }
+
+        .nav-links li a {
+            color: #d1d5db;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            padding: 12px 10px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav-links li a:hover {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .nav-links li a i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* --- Main Content Styling --- */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            width: calc(100% - var(--sidebar-width));
+            padding: 40px;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 40px;
+            border-left: 6px solid var(--accent-color);
+        }
+
+        h1 {
+            color: var(--primary-dark);
+            font-size: 2.2rem;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* --- Card & Map Styling --- */
+        section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            scroll-margin-top: 20px;
+        }
+
+        section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: var(--primary-dark);
+            font-weight: 700;
+        }
+
+        .map-wrapper {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* THE FIX FOR STRETCHED IMAGES */
+        .map-wrapper img {
+            max-width: 100%;       /* Ensure it fits in the box width-wise */
+            height: auto;          /* Adjust height automatically to maintain aspect ratio */
+            max-height: 600px;     /* Prevent it from becoming too tall on huge screens */
+            display: block;
+            margin: 0 auto;        /* Center the image */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* Subtle shadow for depth */
+        }
+
+        /* --- Analysis Box Styling --- */
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .info-box {
+            background-color: #f0f9ff;
+            border-left: 4px solid var(--primary-light);
+            padding: 15px;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .info-box h4 {
+            color: var(--primary-dark);
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-box p {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #4b5563;
+        }
+
+        /* Specific Colors for Risk Types */
+        .risk-high { border-left-color: #ef4444; background-color: #fef2f2; }
+        .risk-med { border-left-color: #f59e0b; background-color: #fffbeb; }
+        .risk-safe { border-left-color: #10b981; background-color: #ecfdf5; }
+
+        .disclaimer {
+            background-color: #fff7ed;
+            border: 1px solid #ffedd5;
+            color: #9a3412;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin-top: 20px;
+        }
+
+        /* --- Mobile Responsiveness --- */
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main-content { margin-left: 0; width: 100%; padding: 20px; }
+            .analysis-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-globe-asia"></i> GAYA RISK ATLAS
+        </div>
+        <ul class="nav-links">
+            <li><a href="#summary"><i class="fas fa-home"></i> Summary</a></li>
+            <li><a href="#population"><i class="fas fa-users"></i> Population</a></li>
+            <li><a href="#landuse"><i class="fas fa-tree"></i> Landuse</a></li>
+            <li><a href="#geology"><i class="fas fa-mountain"></i> Geology</a></li>
+            <li><a href="#multi-hazard"><i class="fas fa-layer-group"></i> Multi-Hazard Index</a></li>
+            <li><a href="#drowning"><i class="fas fa-water"></i> Drowning Risk</a></li>
+            <li><a href="#lightning"><i class="fas fa-bolt"></i> Lightning Risk</a></li>
+            <li><a href="#flood"><i class="fas fa-cloud-showers-heavy"></i> Flood Risk</a></li>
+            <li><a href="#drought"><i class="fas fa-sun"></i> Drought Risk</a></li>
+            <li><a href="#heatwave"><i class="fas fa-temperature-high"></i> Heatwave Risk</a></li>
+            <li><a href="#fire"><i class="fas fa-fire"></i> Fire Risk</a></li>
+            <li><a href="#earthquake"><i class="fas fa-house-crack"></i> Earthquake Risk</a></li>
+            <li><a href="#hospital"><i class="fas fa-hospital"></i> Hospital Infra</a></li>
+            <li><a href="#school"><i class="fas fa-school"></i> School Infra</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        
+        <header>
+            <h1>Digital Risk Atlas</h1>
+            <div class="subtitle">Multi-Hazard Prioritization for Gaya District, Bihar</div>
+            <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">Prepared for the Government of Bihar | Digital Risk Atlas</p>
+        </header>
+
+        <!-- Summary -->
+        <section id="summary">
+            <div class="section-header">
+                <h2 class="section-title">1. Executive Summary</h2>
+            </div>
+            <p style="margin-bottom: 15px;">Gaya District faces a complex multi-hazard landscape shaped by its diverse geography and dense population centers. This Atlas consolidates evidence on floods, droughts, heatwaves, lightning, and earthquakes to guide decision-making.</p>
+            <div class="analysis-grid">
+                <div class="info-box">
+                    <h4><i class="fas fa-map-marker-alt"></i> Geographic Insight</h4>
+                    <p>Eastern/Central Gaya faces exposure to floods and heatwaves, while Southern/Southwestern blocks carry elevated risks for drought and fire.</p>
+                </div>
+                <div class="info-box risk-high">
+                    <h4><i class="fas fa-exclamation-triangle"></i> Critical Areas</h4>
+                    <p>Urban centers like Gaya Town, Bodh Gaya, and Manpur show consistently high exposure due to population density and infrastructure concentration.</p>
+                </div>
+            </div>
+            <div class="disclaimer">
+                <strong>Disclaimer:</strong> These maps are for planning and decision support. Results may contain limitations due to data availability and modeling assumptions. Boundaries are subject to revision.
+            </div>
+        </section>
+
+        <!-- 3.1 Population -->
+        <section id="population">
+            <div class="section-header">
+                <h2 class="section-title">3.1 Population Distribution</h2>
+            </div>
+            <!-- Update the src to your actual image filename -->
+            <div class="map-wrapper">
+                <img src="population.jpg" alt="Population Map of Gaya">
+            </div>
+            <div class="analysis-grid">
+                <div class="info-box">
+                    <h4>Description</h4>
+                    <p>Visualizes population counts across blocks based on 2020 projections. Darker red indicates higher density.</p>
+                </div>
+                <div class="info-box risk-high">
+                    <h4>High Density Blocks</h4>
+                    <p><strong>Gaya Town:</strong> 764,604 people<br><strong>Manpur:</strong> 206,567 people<br>These areas require robust evacuation plans.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3.2 Landuse -->
+        <section id="landuse">
+            <div class="section-header">
+                <h2 class="section-title">3.2 Landuse / Landcover</h2>
+            </div>
+            <div class="map-wrapper">
+                <img src="landuse.jpg" alt="Landuse Map">
+            </div>
+            <div class="analysis-grid">
+                <div class="info-box risk-safe">
+                    <h4>Vegetation & Water</h4>
+                    <p>Includes Forest reserves (Green) and Water Bodies (Blue), critical for ecological balance and flood buffering.</p>
+                </div>
+                <div class="info-box risk-med">
+                    <h4>Human Impact</h4>
+                    <p>Built-up areas (Red) are concentrated in the center, while Agriculture (Yellow) dominates the rural landscape.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3.3 Geology -->
+        <section id="geology">
+            <div class="section-header">
+                <h2 class="section-title">3.3 Geological Formations</h2>
+            </div>
+            <div class="map-wrapper">
+                <img src="geology.jpg" alt="Geology Map">
+            </div>
+            <div class="analysis-grid">
+                <div class="info-box">
+                    <h4>Composition</h4>
+                    <p>Major formations include Alluvium, Gneiss, Granite, and Sandstone. The soil behavior here influences seismic amplification.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3.4 Multi-Hazard -->
+        <section id="multi-hazard">
+            <div class="section-header">
+                <h2 class="section-title">3.4 Multi-Hazard Prioritization</h2>
+            </div>
+            <div class="map-wrapper">
+                <img src="multihazard.jpg" alt="Multi-Hazard Risk Map">
+            </div>
+            <div class="analysis-grid">
+                <div class="info-box risk-high">
+                    <h4><i class="fas fa-exclamation-circle"></i> High Risk Zones (Red)</h4>
+                    <p>Gaya Town, Bodh Gaya, and Barachatti. These blocks face the cumulative impact of multiple hazards simultaneously.</p>
+                </div>
+                <div class="info-box risk-med">
+                    <h4>Moderate Risk (Orange)</h4>
+                    <p>Manpur and Mohanpur. These areas require targeted mitigation strategies for specific seasonal hazards.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3.5 Drowning -->
+        <section id="drowning">
+            <div class="section-header">
+                <h2 class="section-title">3.5 Drowning Risk (2022-2025)</h2>
+            </div>
+            <div class="map-wrapper">
+                <img src="drowning.jpg" alt="Drowning Risk Map">
+            </div>
+            <div class="analysis-grid">
+                <div class="info-box risk-high">
+                    <h4>Fatalities Data</h4>
+                    <p><strong>Manpur:</strong> 22 Deaths (Highest)<br><strong>Gaya Town:</strong> 18 Deaths<br><strong>Wazirganj:</strong> 16 Deaths</p>
+                </div>
+                <div class="info-box">
+                    <h4>Mitigation Focus</h4>
+                    <p>High-risk clusters are identified along major water bodies, indicating a need for safety barriers and community awareness.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3.6 Lightning -->
+        <section id="lightning">
+            <div class="section-header">
+                <h2 class="section-title">3.6 Lightning Risk (2022-2025)</h2>
+            </div>
+            <div class="map-wrapper">
+                <img src="lightning.jpg" alt="Lightning Risk Map">
+            </div>
+            <div class="analysis-grid">
+                <div class="info-box risk-high">
+                    <h4>High Incidence Blocks</h4>
+                    <p><strong>Belaganj:</strong> 11 Deaths<br><strong>Mohanpur & Imamganj:</strong> 10 Deaths each.</p>
+                </div>
+                <div class="info-box risk-med">
+                    <h4>Safety Intervention</h4>
+                    <p>These areas require early warning systems (Damini App promotion) and installation of lightning arresters.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3.7 Flood -->
+        <section id="flood">
+            <div class="section-header">
+                <h2 class="section-title">3.7 Flood Risk Analysis</h2>
+            </div>
+            <div class="map-wrapper">
+                <img src="flood.jpg" alt="Flood Risk Map">
+            </div>
+            <div class="analysis-grid">
+                <div class="info-box risk-high">
+                    <h4>Susceptibility</h4>
+                    <p><strong>Very High (Red):</strong> Central blocks along river paths (Gaya Town, Bodh Gaya) and eastern blocks (Mohanpur).</p>
+                </div>
+                <div class="info-box">
+                    <h4>Drivers</h4>
+                    <p>Based on hydrological patterns, historical flood behavior, and proximity to major river channels.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3.8 Drought -->
+        <section id="drought">
+            <div class="section-header">
+                <h2 class="section-title">3.8 Drought Risk Analysis</h2>
+            </div>
+            <div class="map-wrapper">
+                <img src="drought.jpg" alt="Drought Risk Map">
+            </div>
+            <div class="analysis-grid">
+                <div class="info-box risk-med">
+                    <h4>Water Scarcity Zones</h4>
+                    <p>Southern and Western blocks (Barachatti, Mohanpur, Imamganj) show elevated risk due to rainfall variability.</p>
+                </div>
+                <div class="info-box">
+                    <h4>Agricultural Impact</h4>
+                    <p>These areas are prone to agricultural drought, necessitating water conservation and crop diversification.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3.9 Heatwave -->
+        <section id="heatwave">
+            <div class="section-header">
+                <h2 class="section-title">3.9 Heatwave Risk (LST Anomalies)</h2>
+            </div>
+            <div class="map-wrapper">
+                <img src="heatwave.jpg" alt="Heatwave Risk Map">
+            </div>
+            <div class="analysis-grid">
+                <div class="info-box risk-high">
+                    <h4>Temperature Extremes</h4>
+                    <p><strong>Very High Risk:</strong> Land Surface Temperatures reaching 52-54°C during April-June (2013-2023).</p>
+                </div>
+                <div class="info-box">
+                    <h4>Vulnerable Blocks</h4>
+                    <p>Urban heat islands are visible in Gaya Town, but significant heat stress is also observed in central rural blocks.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3.10 Fire -->
+        <section id="fire">
+            <div class="section-header">
+                <h2 class="section-title">3.10 Fire Risk Analysis</h2>
+            </div>
+            <div class="map-wrapper">
+                <img src="fire.jpg" alt="Fire Risk Map">
+            </div>
+            <div class="analysis-grid">
+                <div class="info-box">
+                    <h4>Causes</h4>
+                    <p>Influenced by vegetation dryness and densely populated built-up areas acting as ignition sources.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3.11 Earthquake -->
+        <section id="earthquake">
+            <div class="section-header">
+                <h2 class="section-title">3.11 Earthquake Risk Analysis</h2>
+            </div>
+            <div class="map-wrapper">
+                <img src="earthquake.jpg" alt="Earthquake Risk Map">
+            </div>
+            <div class="analysis-grid">
+                <div class="info-box risk-med">
+                    <h4>Seismic Hazard</h4>
+                    <p>Northern blocks show higher seismic risk categories compared to the southern plateau, influenced by fault proximity.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3.12 Hospital -->
+        <section id="hospital">
+            <div class="section-header">
+                <h2 class="section-title">3.12 Hospital Infrastructure</h2>
+            </div>
+            <div class="map-wrapper">
+                <img src="hospitals.jpg" alt="Hospital Risk Map">
+            </div>
+            <div class="analysis-grid">
+                <div class="info-box risk-safe">
+                    <h4>High Capacity</h4>
+                    <p>Gaya Town (1203 beds) and Tikari (65 beds) serve as the primary medical hubs.</p>
+                </div>
+                <div class="info-box risk-high">
+                    <h4>Gaps in Service</h4>
+                    <p>Guraru (30 beds) and Imamganj (50 beds) have low capacity relative to their risk profile.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3.13 School -->
+        <section id="school">
+            <div class="section-header">
+                <h2 class="section-title">3.13 School Infrastructure</h2>
+            </div>
+            <div class="map-wrapper">
+                <img src="schools.jpg" alt="School Risk Map">
+            </div>
+            <div class="analysis-grid">
+                <div class="info-box">
+                    <h4>Infrastructure Distribution</h4>
+                    <p>Tikari (235 schools) and Gaya Town (231 schools) have the highest concentration of government educational facilities.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p>&copy; 2025 Digital Risk Atlas | Government of Bihar | Supported by UNDP & BSDMA</p>
+        </footer>
+
+    </main>
+
+</body>
+</html>
