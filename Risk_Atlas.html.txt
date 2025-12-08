@@ -326,7 +326,7 @@
                 <h2 class="section-title">3.4 Multi-Hazard Prioritization</h2>
             </div>
             <div class="map-wrapper">
-                <img src="multihazard.jpg" alt="Multi-Hazard Risk Map">
+                <img src="multihazard.jpg">
             </div>
             <div class="analysis-grid">
                 <div class="info-box risk-high">
@@ -515,4 +515,5 @@
     </main>
 
 </body>
+
 </html>
