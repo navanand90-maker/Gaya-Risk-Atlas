@@ -43,6 +43,7 @@
         .layer-btn.active i { color: #1a1a1a; }
 
         #map { flex: 1; background-color: #e5e5e5; }
+        /* Label Styling - Clean white outline text */
         .leaflet-tooltip.block-label { 
             background: transparent !important; 
             border: none !important; 
@@ -110,7 +111,7 @@
         L.control.zoom({ position: 'bottomright' }).addTo(map);
         L.control.layers({ "Clean Map": lightMap, "Satellite": satelliteMap }, null, { position: 'topright' }).addTo(map);
 
-        // --- MASTER LABEL LAYER ---
+        // --- MASTER LABEL LAYER (Visible on top of everything) ---
         map.createPane('labels');
         map.getPane('labels').style.zIndex = 650;
         map.getPane('labels').style.pointerEvents = 'none';
@@ -129,7 +130,6 @@
             'flood': { title: "Flood Risk", desc: "Monsoon flooding analysis.", legend: [{col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'drought': { title: "Drought Risk", desc: "Agricultural drought vulnerability.", legend: [{col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'heat': { title: "Heatwave Risk", desc: "Land Surface Temp (LST).", legend: [{col:'#4a148c', lbl:'Extreme'}, {col:'#d32f2f', lbl:'Very High'}, {col:'#f57f17', lbl:'High'}, {col:'#fbc02d', lbl:'Moderate'}] },
-            // UPDATED LIGHTNING LEGEND
             'lightning': { title: "Lightning Risk", desc: "Fatality counts (2022-2025).", legend: [{col:'#4a148c', lbl:'Very High (>9)'}, {col:'#d32f2f', lbl:'Mod. High (6-9)'}, {col:'#f57f17', lbl:'Moderate (3-6)'}, {col:'#388e3c', lbl:'Low (<3)'}] },
             'quake': { title: "Earthquake Risk", desc: "Seismic vulnerability index.", legend: [{col:'#4a148c', lbl:'High Risk'}, {col:'#d32f2f', lbl:'Mod-High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'fire': { title: "Fire Risk", desc: "Fire susceptibility index.", legend: [{col:'#4a148c', lbl:'Extreme'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
@@ -139,11 +139,7 @@
 
         // --- 1. COLUMN DETECTOR ---
         function detectColumn(props, type) {
-            if (type === 'lightning') {
-                if (props['Total'] !== undefined) return 'Total';
-                if (props['TOTAL'] !== undefined) return 'TOTAL';
-                return 'Total'; // Force this column for lightning
-            }
+            if (type === 'lightning') return 'Total'; // HARDCODED FOR SAFETY
             var candidates = ['Risk Class', 'Risk_Class', 'Total', '_mean', 'Mean', 'Pop', 'P_Total'];
             for (var c of candidates) { if (props[c] !== undefined) return c; }
             if (type === 'num') {
@@ -154,7 +150,7 @@
             return 'Risk Class';
         }
 
-        // --- 2. STATS (For Fire/Quake/Heat only) ---
+        // --- 2. STATS CALCULATION ---
         function calculateStats(data, colName) {
             var min = Infinity, max = -Infinity;
             data.features.forEach(f => {
@@ -171,19 +167,15 @@
         }
 
         // --- 3. COLOR SCALES ---
-        
-        // SIMPLE HARDCODED LIGHTNING SCALE
         function getLightningColor(d) {
             var num = parseFloat(d);
             if (isNaN(num)) return '#cccccc';
-            
-            if (num > 9) return '#4a148c'; // Very High (Purple)
-            if (num >= 6) return '#d32f2f'; // Mod High (Red)
-            if (num >= 3) return '#f57f17'; // Moderate (Orange)
-            return '#388e3c'; // Low (Green)
+            if (num > 9) return '#4a148c'; 
+            if (num >= 6) return '#d32f2f'; 
+            if (num >= 3) return '#f57f17'; 
+            return '#388e3c'; 
         }
 
-        // Dynamic for others (Fire/Quake)
         function getDynamicColor(d, min, max) {
             var num = parseFloat(d);
             if (isNaN(num)) return '#cccccc';
@@ -222,12 +214,13 @@
              return num > 250000 ? '#08306b' : num > 150000 ? '#08519c' : num > 100000 ? '#2171b5' : num > 50000 ? '#6baed6' : '#deebf7';
         }
 
-        // --- LAYER FACTORY ---
+        // --- LAYER FACTORY (New "Container" Method) ---
         var layers = {};
         var currentLayer = null;
 
         function createLayer(url, logicType, explicitCol) {
-            var lyr = L.geoJson(null, {});
+            // 1. Create a group to hold the layer once loaded
+            var container = L.featureGroup();
             
             fetch(url).then(r => r.json()).then(data => {
                 if (data.features.length > 0) {
@@ -235,62 +228,59 @@
                     var colName = explicitCol || detectColumn(sampleProps, logicType);
                     
                     var stats = { min: 0, max: 100 };
-                    // Only calculate stats for generic numerical layers, NOT Lightning (which is fixed)
                     if (logicType === 'num') {
                         stats = calculateStats(data, colName);
                     }
 
-                    lyr.options.style = function(feature) {
-                        var val = feature.properties[colName];
-                        var col = '#ccc';
-                        
-                        if (logicType === 'lightning') col = getLightningColor(val);
-                        else if (logicType === 'cat') col = getCatColor(val);
-                        else if (logicType === 'land') col = getLandColor(val);
-                        else if (logicType === 'pop') col = getPopColor(val);
-                        else if (logicType === 'num') col = getDynamicColor(val, stats.min, stats.max);
-                        
-                        return { fillColor: col, weight: 1, opacity: 1, color: 'white', fillOpacity: 0.8 };
-                    };
+                    // 2. Create the GeoJSON with calculated styles
+                    var geoJsonLayer = L.geoJson(data, {
+                        style: function(feature) {
+                            var val = feature.properties[colName];
+                            var col = '#cccccc';
+                            
+                            if (val !== undefined && val !== null) {
+                                if (logicType === 'lightning') col = getLightningColor(val);
+                                else if (logicType === 'cat') col = getCatColor(val);
+                                else if (logicType === 'land') col = getLandColor(val);
+                                else if (logicType === 'pop') col = getPopColor(val);
+                                else if (logicType === 'num') col = getDynamicColor(val, stats.min, stats.max);
+                            }
+                            return { fillColor: col, weight: 1, opacity: 1, color: 'white', fillOpacity: 0.8 };
+                        },
+                        onEachFeature: function(feature, layer) {
+                            var props = feature.properties;
+                            var bName = props.Blocks || props.Block_Name || props.BLOCK_NAME || "Block";
+                            var valDisplay = props[colName];
+                            if (typeof valDisplay === 'number') valDisplay = Math.round(valDisplay * 100) / 100;
 
-                    lyr.eachLayer(function(layer) {
-                        var props = layer.feature.properties;
-                        // For popup name
-                        var bName = props.Blocks || props.Block_Name || props.BLOCK_NAME || "Block";
-                        var valDisplay = props[colName];
-                        if (typeof valDisplay === 'number') valDisplay = Math.round(valDisplay * 100) / 100;
-
-                        var popup = `<div style="font-family:'Poppins';">
-                                        <h4 style="margin:0 0 5px 0;">${bName}</h4>
-                                        <span style="font-size:0.9rem; color:#555;">
-                                            Value: <b>${valDisplay !== undefined ? valDisplay : 'No Data'}</b>
-                                        </span>
-                                     </div>`;
-                        layer.bindPopup(popup);
+                            layer.bindPopup(`<div style="font-family:'Poppins';">
+                                            <h4 style="margin:0 0 5px 0;">${bName}</h4>
+                                            <span style="font-size:0.9rem; color:#555;">
+                                                Value: <b>${valDisplay !== undefined ? valDisplay : 'No Data'}</b>
+                                            </span>
+                                         </div>`);
+                        }
                     });
 
-                    lyr.addData(data);
+                    // 3. Add to container
+                    container.addLayer(geoJsonLayer);
                 }
             }).catch(e => console.log('Pending: ' + url));
-            return lyr;
+            
+            return container;
         }
 
         // --- INITIALIZE LAYERS ---
+        layers['pop'] = createLayer('data/population.json', 'pop');
+        layers['flood'] = createLayer('data/flood.json', 'cat');
+        layers['drought'] = createLayer('data/drought.json', 'cat');
         
-        layers['pop'] = createLayer('data/population.json', 'pop', 'Pop');
-        layers['flood'] = createLayer('data/flood.json', 'cat', 'Risk Class');
-        layers['drought'] = createLayer('data/drought.json', 'cat', 'Risk Class');
-        
-        // Lightning uses specific type logic now
-        layers['lightning'] = createLayer('data/lightning.json', 'lightning', 'Total'); 
-        
-        // Others use dynamic math
         layers['heat'] = createLayer('data/heatwave.json', 'num', '_mean');
+        layers['lightning'] = createLayer('data/lightning.json', 'lightning', 'Total'); // Explicit 'Total'
         layers['fire'] = createLayer('data/fire.json', 'num', '_mean');
         layers['quake'] = createLayer('data/earthquake.json', 'num', '_mean');
         
         layers['land'] = createLayer('data/landuse.json', 'land', 'Landuse_Class');
-
 
         // --- INTERACTION ---
         function toggleLayer(id) {
@@ -299,7 +289,9 @@
             if (layers[id]) {
                 currentLayer = layers[id];
                 map.addLayer(currentLayer);
-                if (currentLayer.getLayers().length > 0) map.fitBounds(currentLayer.getBounds());
+                if (currentLayer.getBounds().isValid()) {
+                   map.fitBounds(currentLayer.getBounds());
+                }
             }
 
             if (!map.hasLayer(masterLabelLayer)) {
