@@ -103,18 +103,17 @@
             'flood': { title: "Flood Risk", desc: "Monsoon flooding analysis for river basins.", legend: [{col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'drought': { title: "Drought Risk", desc: "Agricultural drought vulnerability.", legend: [{col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'heat': { title: "Heatwave Risk", desc: "Land Surface Temp (LST) Anomaly.", legend: [{col:'#4a148c', lbl:'Extreme'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
-            'lightning': { title: "Lightning Risk", desc: "Total fatality counts (2022-2025).", legend: [{col:'#4a148c', lbl:'Critical'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
+            'lightning': { title: "Lightning Risk", desc: "Total fatality counts (2022-2025).", legend: [{col:'#4a148c', lbl:'High (>15)'}, {col:'#d32f2f', lbl:'Mod-High (10-15)'}, {col:'#f57f17', lbl:'Moderate (5-10)'}, {col:'#fbc02d', lbl:'Low (<5)'}] },
             'quake': { title: "Earthquake Risk", desc: "Seismic vulnerability index.", legend: [{col:'#4a148c', lbl:'High Risk'}, {col:'#d32f2f', lbl:'Mod-High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'fire': { title: "Fire Risk", desc: "Fire susceptibility index.", legend: [{col:'#4a148c', lbl:'Extreme'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'pop': { title: "Population Density", desc: "Total population distribution.", legend: [{col:'#08306b', lbl:'Very High'}, {col:'#4292c6', lbl:'High'}, {col:'#deebf7', lbl:'Low'}] },
             'land': { title: "Landuse Map", desc: "Land cover classification.", legend: [{col:'#b71c1c', lbl:'Builtup'}, {col:'#fbc02d', lbl:'Agriculture'}, {col:'#1b5e20', lbl:'Forest'}] }
         };
 
-        // --- DYNAMIC SCALING ENGINE ---
-        // This function calculates Min/Max for any layer to ensure gradients always show!
+        // --- THE "AUTO-SCALER" ---
+        // Calculates Min/Max dynamically to ensure perfect gradients for every dataset
         function calculateStats(data, colName) {
-            var min = Infinity;
-            var max = -Infinity;
+            var min = Infinity, max = -Infinity;
             data.features.forEach(f => {
                 var val = f.properties[colName];
                 if (val !== undefined && val !== null && !isNaN(val)) {
@@ -123,25 +122,27 @@
                     if (val > max) max = val;
                 }
             });
+            // Fallback if data is empty or uniform
+            if (min === Infinity) return { min: 0, max: 1 }; 
+            if (min === max) return { min: min * 0.9, max: max * 1.1 };
             return { min: min, max: max };
         }
 
+        // Generates color based on where the value sits between Min and Max
         function getDynamicColor(d, min, max) {
             var num = parseFloat(d);
             if (isNaN(num)) return '#cccccc';
             
-            // Normalize value to 0-1 range
             var range = max - min;
-            if (range === 0) return '#f57f17'; // If all values are same, show Orange
-            var pct = (num - min) / range;
+            var pct = (num - min) / range; // 0.0 to 1.0
 
-            // Apply Traffic Light Gradient (Green -> Yellow -> Orange -> Red -> Purple)
-            if (pct > 0.90) return '#4a148c'; // Top 10%
-            if (pct > 0.70) return '#b91c1c'; // Top 30%
-            if (pct > 0.50) return '#d32f2f'; // Top 50%
-            if (pct > 0.30) return '#f57f17'; // Top 70%
-            if (pct > 0.15) return '#fbc02d'; // Top 85%
-            return '#388e3c'; // Bottom 15%
+            // TRAFFIC LIGHT GRADIENT (Green -> Yellow -> Orange -> Red -> Purple)
+            if (pct > 0.85) return '#4a148c'; // Top 15% (Extreme)
+            if (pct > 0.65) return '#b91c1c'; // Top 35% (Very High)
+            if (pct > 0.45) return '#d32f2f'; // Top 55% (High)
+            if (pct > 0.25) return '#f57f17'; // Top 75% (Moderate)
+            if (pct > 0.10) return '#fbc02d'; // Top 90% (Low)
+            return '#388e3c'; // Bottom 10% (Very Low)
         }
 
         // Categorical (Text based)
@@ -157,6 +158,7 @@
 
         function getPopColor(d) {
             var num = parseFloat(d);
+            if (isNaN(num)) return '#ccc';
             return num > 250000 ? '#08306b' : num > 150000 ? '#08519c' : num > 100000 ? '#2171b5' : num > 50000 ? '#6baed6' : '#deebf7';
         }
         function getLandColor(d) {
@@ -173,17 +175,26 @@
         var currentLayer = null;
 
         function createLayer(url, logicType, colName) {
-            var lyr = L.geoJson(null, {
-                // Style function is generated AFTER data loads
-            });
+            var lyr = L.geoJson(null, {});
 
             fetch(url).then(r => r.json()).then(data => {
                 
-                // 1. CALCULATE STATS DYNAMICALLY
+                // 1. DYNAMIC STATS CALCULATION
                 var stats = { min: 0, max: 100 };
+                // If colName isn't provided, try to find it
+                var sampleProps = data.features[0].properties;
+                
+                // DATA DETECTIVE: Find the numerical column if not specified
+                if (logicType === 'num' && (!colName || !sampleProps[colName])) {
+                    if (sampleProps['Total']) colName = 'Total';       // Lightning
+                    else if (sampleProps['_mean']) colName = '_mean'; // Heat/Fire/Quake
+                    else if (sampleProps['Mean']) colName = 'Mean';
+                    else if (sampleProps['Pop']) colName = 'Pop';
+                }
+
                 if (logicType === 'num') {
                     stats = calculateStats(data, colName);
-                    // console.log(`Stats for ${url}: Min ${stats.min}, Max ${stats.max}`); // Debug
+                    console.log(`Layer ${url}: Found column '${colName}', Min: ${stats.min}, Max: ${stats.max}`);
                 }
 
                 // 2. APPLY STYLE
@@ -199,7 +210,7 @@
                     return { fillColor: col, weight: 1, opacity: 1, color: 'white', fillOpacity: 0.8 };
                 };
 
-                // 3. APPLY INTERACTION
+                // 3. APPLY POPUPS & LABELS
                 lyr.eachLayer(function(layer) {
                     var props = layer.feature.properties;
                     var bName = props.Blocks || props.Block_Name || props.BLOCK_NAME || "Risk Zone";
@@ -226,19 +237,16 @@
             return lyr;
         }
 
-        // --- INITIALIZE LAYERS (Correct Columns Applied) ---
-        
+        // --- INITIALIZE LAYERS ---
         layers['pop'] = createLayer('data/population.json', 'pop', 'Pop');
-        
-        // Categorical
         layers['flood'] = createLayer('data/flood.json', 'cat', 'Risk Class');
         layers['drought'] = createLayer('data/drought.json', 'cat', 'Risk Class');
-
-        // Numerical - NOW DYNAMICALLY SCALED
+        
+        // Numerical (Let the code auto-detect the column for safety)
         layers['heat'] = createLayer('data/heatwave.json', 'num', '_mean');
-        layers['lightning'] = createLayer('data/lightning.json', 'num', 'Total'); // Use 'Total' for lightning
+        layers['lightning'] = createLayer('data/lightning.json', 'num', 'Total'); // Explicitly set 'Total'
         layers['fire'] = createLayer('data/fire.json', 'num', '_mean');
-        layers['quake'] = createLayer('data/earthquake.json', 'num', '_mean'); // Assumed _mean based on pattern
+        layers['quake'] = createLayer('data/earthquake.json', 'num', '_mean');
 
         layers['land'] = createLayer('data/landuse.json', 'land', 'Landuse_Class');
 
