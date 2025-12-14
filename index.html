@@ -347,24 +347,23 @@
                     return { fillColor: col, weight: 1, opacity: 1, color: 'white', fillOpacity: 0.7 };
                 },
                 onEachFeature: function(feature, layer) {
-                    // 1. SMART NAME DETECTOR
-                    // Tries to find the block name automatically
                     var props = feature.properties;
-                    var bName = props.Block_Name || props.BLOCK_NAME || props.Block || props.Name || props.NAME || "Block";
+                    
+                    // 1. GET BLOCK NAME (Using the column "Blocks" you found)
+                    var bName = props.Blocks || props.Block_Name || "Block"; 
 
-                    // 2. ADD PERMANENT LABEL
-                    // 'permanent: true' makes it always visible. Change to 'false' for hover only.
+                    // 2. ADD PERMANENT TEXT LABEL
                     layer.bindTooltip(bName, {
                         permanent: true,
                         direction: "center",
                         className: "block-label"
                     });
 
-                    // 3. ADD POPUP (Click)
+                    // 3. ADD POPUP
                     var popup = `<div style="font-family:'Poppins';">
                                     <h4 style="margin:0 0 5px 0;">${bName}</h4>
                                     <span style="font-size:0.9rem; color:#555;">
-                                        Data: <b>${props[colName] || 'No Data'}</b>
+                                        Value: <b>${Math.round(props[colName]) || 'No Data'}</b>
                                     </span>
                                  </div>`;
                     layer.bindPopup(popup);
@@ -373,7 +372,7 @@
             fetch(url).then(r => r.json()).then(d => lyr.addData(d)).catch(e => console.log('Pending: ' + url));
             return lyr;
         }
-
+        
         // Initialize (Ensure these file names match your uploads!)
         layers['multi'] = createLayer('data/multihazard.json', 'risk', 'Risk_Class');
         layers['flood'] = createLayer('data/flood.json', 'risk', 'Risk_Class');
