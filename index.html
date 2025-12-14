@@ -177,14 +177,34 @@
     <!-- SCRIPTS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 1. MAP INIT
-        var map = L.map('map', { zoomControl: false }).setView([24.7914, 85.0002], 10);
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        // 1. MAP INIT & BASE LAYERS
+        // Define the two background options
+        var lightMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '© OpenStreetMap, © CartoDB'
-        }).addTo(map);
+        });
 
-        // 2. DATA CONFIG
+        var satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles © Esri'
+        });
+
+        // Initialize Map with 'lightMap' as default
+        var map = L.map('map', { 
+            zoomControl: false, 
+            layers: [lightMap] // Default layer
+        }).setView([24.7914, 85.0002], 10);
+
+        // Add Zoom Control (Bottom Right)
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // Add Base Map Switcher (Top Right)
+        var baseMaps = {
+            "Clean Map": lightMap,
+            "Satellite": satelliteMap
+        };
+        L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+
+        // 2. DATA CONFIG (Same as before)
         var layerInfo = {
             'multi': { title: "Multi-Hazard Context", desc: "Gaya district is exposed to multiple natural hazards. Risk is unevenly distributed across blocks.", legend: [{col:'#b91c1c', lbl:'Very High'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'flood': { title: "Flood Risk Analysis", desc: "Recurrent monsoon flooding affects Manpur, Bodh Gaya, and Atri due to river overflow.", legend: [{col:'#d32f2f', lbl:'High Risk'}, {col:'#f57f17', lbl:'Moderate Risk'}, {col:'#388e3c', lbl:'Low Risk'}] },
@@ -208,7 +228,6 @@
             return '#ccc';
         }
         function getPopColor(d) {
-            // Updated thresholds for Gaya population range
             var num = parseFloat(d);
             if (isNaN(num)) return '#ccc';
             return num > 250000 ? '#08306b' : num > 150000 ? '#08519c' : num > 100000 ? '#2171b5' : num > 50000 ? '#6baed6' : '#deebf7';
@@ -242,13 +261,13 @@
                     layer.bindTooltip(bName, {
                         permanent: true,
                         direction: "center",
-                        className: "block-label" // This class is defined in CSS to be transparent
+                        className: "block-label"
                     });
 
                     // FIX 3: Popup reads the specific column
                     var displayVal = props[colName];
                     if (displayVal === undefined || displayVal === null) displayVal = "No Data";
-                    else if (type === 'pop') displayVal = Math.round(displayVal).toLocaleString(); // Format number with commas
+                    else if (type === 'pop') displayVal = Math.round(displayVal).toLocaleString();
 
                     var popup = `<div style="font-family:'Poppins';">
                                     <h4 style="margin:0 0 5px 0;">${bName}</h4>
@@ -264,10 +283,8 @@
         }
 
         // 5. INITIALIZE LAYERS
-        // Using "Pop" because your JSON showed "Pop":288595
         layers['pop'] = createLayer('data/population.json', 'pop', 'Pop');
         
-        // Ensure these column names match your other files later!
         layers['multi'] = createLayer('data/multihazard.json', 'risk', 'Risk_Class');
         layers['flood'] = createLayer('data/flood.json', 'risk', 'Risk_Class');
         layers['drought'] = createLayer('data/drought.json', 'risk', 'Risk_Class');
