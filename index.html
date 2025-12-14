@@ -404,7 +404,7 @@
             // Update Legend
             var legWrap = document.getElementById('legend-wrapper');
             var legBox = document.getElementById('dynamic-legend');
-            legWrap.style.display = 'block';
+            legWrap.style.display = 'blocks';
             legBox.innerHTML = '';
             data.legend.forEach(item => {
                 legBox.innerHTML += `<div class="legend-item"><div class="color-dot" style="background:${item.col}"></div>${item.lbl}</div>`;
@@ -417,4 +417,5 @@
 
     </script>
 </body>
+
 </html>
