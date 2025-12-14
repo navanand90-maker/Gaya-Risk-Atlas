@@ -102,48 +102,46 @@
         var layerInfo = {
             'flood': { title: "Flood Risk", desc: "Monsoon flooding analysis for river basins.", legend: [{col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'drought': { title: "Drought Risk", desc: "Agricultural drought vulnerability.", legend: [{col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
-            'heat': { title: "Heatwave Risk", desc: "Land Surface Temp (LST) Anomaly. Critical threshold >53°C.", legend: [{col:'#4a148c', lbl:'Extreme'}, {col:'#d32f2f', lbl:'Very High'}, {col:'#f57f17', lbl:'High'}, {col:'#fbc02d', lbl:'Moderate'}] },
-            'lightning': { title: "Lightning Risk", desc: "Total fatality counts (2022-2025).", legend: [{col:'#4a148c', lbl:'Critical'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#fbc02d', lbl:'Low'}] },
-            'quake': { title: "Earthquake Risk", desc: "Seismic vulnerability index.", legend: [{col:'#d32f2f', lbl:'High Risk'}, {col:'#f57f17', lbl:'Moderate Risk'}, {col:'#388e3c', lbl:'Low Risk'}] },
-            'fire': { title: "Fire Risk", desc: "Fire susceptibility index.", legend: [{col:'#4a148c', lbl:'Extreme'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#fbc02d', lbl:'Low'}] },
+            'heat': { title: "Heatwave Risk", desc: "Land Surface Temp (LST) Anomaly.", legend: [{col:'#4a148c', lbl:'Extreme'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
+            'lightning': { title: "Lightning Risk", desc: "Total fatality counts (2022-2025).", legend: [{col:'#4a148c', lbl:'Critical'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
+            'quake': { title: "Earthquake Risk", desc: "Seismic vulnerability index.", legend: [{col:'#4a148c', lbl:'High Risk'}, {col:'#d32f2f', lbl:'Mod-High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
+            'fire': { title: "Fire Risk", desc: "Fire susceptibility index.", legend: [{col:'#4a148c', lbl:'Extreme'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'pop': { title: "Population Density", desc: "Total population distribution.", legend: [{col:'#08306b', lbl:'Very High'}, {col:'#4292c6', lbl:'High'}, {col:'#deebf7', lbl:'Low'}] },
             'land': { title: "Landuse Map", desc: "Land cover classification.", legend: [{col:'#b71c1c', lbl:'Builtup'}, {col:'#fbc02d', lbl:'Agriculture'}, {col:'#1b5e20', lbl:'Forest'}] }
         };
 
-        // --- SMART CONTRAST SCALES ---
-        // This function automatically detects the range of data and applies the correct gradient
-        function getSmartRiskColor(d) {
+        // --- DYNAMIC SCALING ENGINE ---
+        // This function calculates Min/Max for any layer to ensure gradients always show!
+        function calculateStats(data, colName) {
+            var min = Infinity;
+            var max = -Infinity;
+            data.features.forEach(f => {
+                var val = f.properties[colName];
+                if (val !== undefined && val !== null && !isNaN(val)) {
+                    val = parseFloat(val);
+                    if (val < min) min = val;
+                    if (val > max) max = val;
+                }
+            });
+            return { min: min, max: max };
+        }
+
+        function getDynamicColor(d, min, max) {
             var num = parseFloat(d);
-            if (isNaN(num)) return '#cccccc'; 
+            if (isNaN(num)) return '#cccccc';
+            
+            // Normalize value to 0-1 range
+            var range = max - min;
+            if (range === 0) return '#f57f17'; // If all values are same, show Orange
+            var pct = (num - min) / range;
 
-            // SCALE A: Temperature / High Index (Values between 35 and 60)
-            // Used for: Heatwaves, Fire Index (if scaled 0-100)
-            if (num > 35) {
-                return num > 53 ? '#4a148c' : // Purple (Extreme)
-                       num > 50 ? '#b91c1c' : // Dark Red
-                       num > 47 ? '#d32f2f' : // Red
-                       num > 44 ? '#f57f17' : // Orange
-                       num > 40 ? '#fbc02d' : // Yellow
-                                  '#388e3c';  // Green
-            }
-
-            // SCALE B: Fatalities / Medium Counts (Values between 1 and 35)
-            // Used for: Lightning, Fire Deaths
-            if (num > 1) {
-                return num > 15 ? '#4a148c' : 
-                       num > 10 ? '#b91c1c' :
-                       num > 7  ? '#d32f2f' :
-                       num > 4  ? '#f57f17' :
-                                  '#fbc02d';
-            }
-
-            // SCALE C: Low Index (Values between 0 and 1)
-            // Used for: Earthquake Index, Normalized Fire Index
-            return num > 0.7 ? '#4a148c' :
-                   num > 0.5 ? '#d32f2f' :
-                   num > 0.3 ? '#f57f17' :
-                   num > 0.1 ? '#fbc02d' :
-                               '#388e3c';
+            // Apply Traffic Light Gradient (Green -> Yellow -> Orange -> Red -> Purple)
+            if (pct > 0.90) return '#4a148c'; // Top 10%
+            if (pct > 0.70) return '#b91c1c'; // Top 30%
+            if (pct > 0.50) return '#d32f2f'; // Top 50%
+            if (pct > 0.30) return '#f57f17'; // Top 70%
+            if (pct > 0.15) return '#fbc02d'; // Top 85%
+            return '#388e3c'; // Bottom 15%
         }
 
         // Categorical (Text based)
@@ -157,6 +155,10 @@
             return '#ccc';
         }
 
+        function getPopColor(d) {
+            var num = parseFloat(d);
+            return num > 250000 ? '#08306b' : num > 150000 ? '#08519c' : num > 100000 ? '#2171b5' : num > 50000 ? '#6baed6' : '#deebf7';
+        }
         function getLandColor(d) {
             if (!d) return '#ccc';
             var val = d.toString().toLowerCase();
@@ -165,67 +167,81 @@
             if (val.includes('forest')) return '#1b5e20';
             return '#ccc';
         }
-        function getPopColor(d) {
-            var num = parseFloat(d);
-            return num > 250000 ? '#08306b' : num > 150000 ? '#08519c' : num > 100000 ? '#2171b5' : num > 50000 ? '#6baed6' : '#deebf7';
-        }
 
         // --- LAYER FACTORY ---
         var layers = {};
         var currentLayer = null;
 
-        function createLayer(url, logicType) {
+        function createLayer(url, logicType, colName) {
             var lyr = L.geoJson(null, {
-                style: function(feature) {
-                    // AUTO-DETECT COLUMN
-                    var props = feature.properties;
-                    // Look for common numerical columns
-                    var val = props['Total'] || props['TOTAL'] || props['_mean'] || props['Mean'] || props['Pop'] || props['Risk Class'] || 0;
-                    
+                // Style function is generated AFTER data loads
+            });
+
+            fetch(url).then(r => r.json()).then(data => {
+                
+                // 1. CALCULATE STATS DYNAMICALLY
+                var stats = { min: 0, max: 100 };
+                if (logicType === 'num') {
+                    stats = calculateStats(data, colName);
+                    // console.log(`Stats for ${url}: Min ${stats.min}, Max ${stats.max}`); // Debug
+                }
+
+                // 2. APPLY STYLE
+                lyr.options.style = function(feature) {
+                    var val = feature.properties[colName];
                     var col = '#ccc';
+
                     if (logicType === 'cat') col = getCatColor(val);
                     else if (logicType === 'land') col = getLandColor(val);
                     else if (logicType === 'pop') col = getPopColor(val);
-                    else col = getSmartRiskColor(val); // Use Smart Scale for Heat, Fire, Lightning
+                    else if (logicType === 'num') col = getDynamicColor(val, stats.min, stats.max);
 
                     return { fillColor: col, weight: 1, opacity: 1, color: 'white', fillOpacity: 0.8 };
-                },
-                onEachFeature: function(feature, layer) {
-                    var props = feature.properties;
+                };
+
+                // 3. APPLY INTERACTION
+                lyr.eachLayer(function(layer) {
+                    var props = layer.feature.properties;
                     var bName = props.Blocks || props.Block_Name || props.BLOCK_NAME || "Risk Zone";
                     
-                    // Permanent Label (Transparent)
                     if (bName !== "Risk Zone") {
                         layer.bindTooltip(bName, { permanent: true, direction: "center", className: "block-label" });
                     }
 
-                    // Value Discovery for Popup
-                    var displayVal = props['Risk Class'] || props['Total'] || props['_mean'] || props['Mean'] || props['Pop'];
-                    if (displayVal !== undefined && typeof displayVal === 'number') {
-                        displayVal = Math.round(displayVal * 100) / 100; // Round 2 decimals
+                    var valDisplay = props[colName];
+                    if (valDisplay !== undefined && typeof valDisplay === 'number') {
+                        valDisplay = Math.round(valDisplay * 100) / 100;
                     }
 
                     var popup = `<div style="font-family:'Poppins';">
                                     <h4 style="margin:0 0 5px 0;">${bName}</h4>
-                                    <span style="font-size:0.9rem; color:#555;">Value: <b>${displayVal || 'No Data'}</b></span>
+                                    <span style="font-size:0.9rem; color:#555;">Value: <b>${valDisplay || 'No Data'}</b></span>
                                  </div>`;
                     layer.bindPopup(popup);
-                }
-            });
-            fetch(url).then(r => r.json()).then(d => lyr.addData(d)).catch(e => console.log('Pending: ' + url));
+                });
+
+                lyr.addData(data);
+                
+            }).catch(e => console.log('Pending: ' + url));
             return lyr;
         }
 
-        // --- INITIALIZE LAYERS ---
-        // Note: Removed column name arg because the function now Auto-Detects!
-        layers['pop'] = createLayer('data/population.json', 'pop');
-        layers['flood'] = createLayer('data/flood.json', 'cat');
-        layers['drought'] = createLayer('data/drought.json', 'cat');
-        layers['heat'] = createLayer('data/heatwave.json', 'num');
-        layers['lightning'] = createLayer('data/lightning.json', 'num');
-        layers['fire'] = createLayer('data/fire.json', 'num');
-        layers['quake'] = createLayer('data/earthquake.json', 'num');
-        layers['land'] = createLayer('data/landuse.json', 'land');
+        // --- INITIALIZE LAYERS (Correct Columns Applied) ---
+        
+        layers['pop'] = createLayer('data/population.json', 'pop', 'Pop');
+        
+        // Categorical
+        layers['flood'] = createLayer('data/flood.json', 'cat', 'Risk Class');
+        layers['drought'] = createLayer('data/drought.json', 'cat', 'Risk Class');
+
+        // Numerical - NOW DYNAMICALLY SCALED
+        layers['heat'] = createLayer('data/heatwave.json', 'num', '_mean');
+        layers['lightning'] = createLayer('data/lightning.json', 'num', 'Total'); // Use 'Total' for lightning
+        layers['fire'] = createLayer('data/fire.json', 'num', '_mean');
+        layers['quake'] = createLayer('data/earthquake.json', 'num', '_mean'); // Assumed _mean based on pattern
+
+        layers['land'] = createLayer('data/landuse.json', 'land', 'Landuse_Class');
+
 
         // --- INTERACTION ---
         function toggleLayer(id) {
