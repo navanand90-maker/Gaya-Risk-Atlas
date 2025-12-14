@@ -43,7 +43,6 @@
         .layer-btn.active i { color: #1a1a1a; }
 
         #map { flex: 1; background-color: #e5e5e5; }
-        /* Label Styling - Clean white outline text */
         .leaflet-tooltip.block-label { 
             background: transparent !important; 
             border: none !important; 
@@ -54,6 +53,7 @@
             text-transform: uppercase; 
             text-shadow: -1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff, -1.5px 1.5px 0 #fff, 1.5px 1.5px 0 #fff; 
             font-family: 'Poppins', sans-serif;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -110,21 +110,22 @@
         L.control.zoom({ position: 'bottomright' }).addTo(map);
         L.control.layers({ "Clean Map": lightMap, "Satellite": satelliteMap }, null, { position: 'topright' }).addTo(map);
 
-        // --- MASTER LABEL LAYER (The Fix) ---
-        // We load the Population file JUST for labels, and overlay it on everything else.
+        // --- MASTER LABEL LAYER ---
+        // This ensures Block Names appear even on layers that don't have name data (like Flood/Drought)
         map.createPane('labels');
-        map.getPane('labels').style.zIndex = 650; // High z-index ensures text is on top
-        map.getPane('labels').style.pointerEvents = 'none'; // Clicks pass through to the layer below
+        map.getPane('labels').style.zIndex = 650;
+        map.getPane('labels').style.pointerEvents = 'none';
 
         var masterLabelLayer = L.geoJson(null, {
-            style: { color: 'transparent', fillOpacity: 0 }, // Invisible shapes
+            style: { color: 'transparent', fillOpacity: 0 }, 
             onEachFeature: function(feature, layer) {
-                var bName = feature.properties.Blocks || feature.properties.Block_Name || "Block";
+                // Try multiple name variations just in case
+                var bName = feature.properties.Blocks || feature.properties.Block_Name || feature.properties.BLOCK_NAME || "Block";
                 layer.bindTooltip(bName, {
                     permanent: true,
                     direction: "center",
                     className: "block-label",
-                    pane: "labels" // Use the custom pane
+                    pane: "labels"
                 });
             }
         });
@@ -134,31 +135,19 @@
             masterLabelLayer.addData(d);
         });
 
-        // --- STORY DATA ---
+        // --- DATA & LEGENDS ---
         var layerInfo = {
             'flood': { title: "Flood Risk", desc: "Monsoon flooding analysis.", legend: [{col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'drought': { title: "Drought Risk", desc: "Agricultural drought vulnerability.", legend: [{col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'heat': { title: "Heatwave Risk", desc: "Land Surface Temp (LST).", legend: [{col:'#4a148c', lbl:'Extreme'}, {col:'#d32f2f', lbl:'Very High'}, {col:'#f57f17', lbl:'High'}, {col:'#fbc02d', lbl:'Moderate'}] },
-            'lightning': { title: "Lightning Risk", desc: "Fatality counts (2022-2025).", legend: [{col:'#4a148c', lbl:'Extreme'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#fbc02d', lbl:'Low'}] },
+            'lightning': { title: "Lightning Risk", desc: "Fatality counts (2022-2025).", legend: [{col:'#4a148c', lbl:'Critical'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#fbc02d', lbl:'Low'}] },
             'quake': { title: "Earthquake Risk", desc: "Seismic vulnerability index.", legend: [{col:'#4a148c', lbl:'High Risk'}, {col:'#d32f2f', lbl:'Mod-High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'fire': { title: "Fire Risk", desc: "Fire susceptibility index.", legend: [{col:'#4a148c', lbl:'Extreme'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'pop': { title: "Population Density", desc: "Total population distribution.", legend: [{col:'#08306b', lbl:'Very High'}, {col:'#4292c6', lbl:'High'}, {col:'#deebf7', lbl:'Low'}] },
             'land': { title: "Landuse Map", desc: "Land cover classification.", legend: [{col:'#b71c1c', lbl:'Builtup'}, {col:'#fbc02d', lbl:'Agriculture'}, {col:'#1b5e20', lbl:'Forest'}] }
         };
 
-        // --- 1. INTELLIGENT COLUMN DETECTOR ---
-        function detectColumn(props, type) {
-            var candidates = ['Total', '_mean', 'Mean', 'Pop', 'P_Total', 'gridcode', 'Risk Class', 'Risk_Class'];
-            for (var c of candidates) { if (props[c] !== undefined) return c; }
-            if (type === 'num') {
-                for (var key in props) {
-                    if (typeof props[key] === 'number' && key !== 'Id' && key !== 'ID' && key !== 'Shape_Area') return key;
-                }
-            }
-            return 'Risk Class';
-        }
-
-        // --- 2. DYNAMIC STATS ---
+        // --- MATH: DYNAMIC STATS ---
         function calculateStats(data, colName) {
             var min = Infinity, max = -Infinity;
             data.features.forEach(f => {
@@ -174,27 +163,31 @@
             return { min: min, max: max };
         }
 
-        // --- 3. UNIVERSAL GRADIENT ---
+        // --- STYLES ---
         function getDynamicColor(d, min, max) {
             var num = parseFloat(d);
             if (isNaN(num)) return '#cccccc';
+            
             var range = max - min;
             var pct = (num - min) / range; 
-            
-            if (pct > 0.80) return '#4a148c'; // Purple
-            if (pct > 0.60) return '#b91c1c'; // Dark Red
-            if (pct > 0.40) return '#d32f2f'; // Red
-            if (pct > 0.20) return '#f57f17'; // Orange
-            if (pct > 0.05) return '#fbc02d'; // Yellow
+
+            // High Contrast Traffic Light Gradient
+            if (pct > 0.85) return '#4a148c'; // Purple
+            if (pct > 0.65) return '#b91c1c'; // Dark Red
+            if (pct > 0.45) return '#d32f2f'; // Red
+            if (pct > 0.25) return '#f57f17'; // Orange
+            if (pct > 0.10) return '#fbc02d'; // Yellow
             return '#388e3c'; // Green
         }
 
         function getCatColor(d) {
             if (!d) return '#ccc';
             var val = d.toString().toLowerCase();
-            if (val.includes('very high')) return '#b91c1c';
+            // Expanded keywords to catch "Risk Class" text
+            if (val.includes('very high') || val.includes('severe')) return '#b91c1c';
             if (val.includes('high')) return '#d32f2f';
             if (val.includes('mod') || val.includes('med')) return '#f57f17';
+            if (val.includes('very low')) return '#2e7d32';
             if (val.includes('low')) return '#388e3c';
             return '#ccc';
         }
@@ -216,75 +209,84 @@
         var layers = {};
         var currentLayer = null;
 
-        function createLayer(url, logicType) {
+        function createLayer(url, logicType, colName) {
             var lyr = L.geoJson(null, {});
+            
             fetch(url).then(r => r.json()).then(data => {
-                if (data.features.length > 0) {
-                    var sampleProps = data.features[0].properties;
-                    var colName = detectColumn(sampleProps, logicType);
-                    var stats = { min: 0, max: 100 };
-                    
-                    if (logicType === 'num' && colName) {
-                        stats = calculateStats(data, colName);
-                    }
-
-                    lyr.options.style = function(feature) {
-                        var val = feature.properties[colName];
-                        var col = '#ccc';
-                        if (logicType === 'cat') col = getCatColor(val);
-                        else if (logicType === 'land') col = getLandColor(val);
-                        else if (logicType === 'pop') col = getPopColor(val);
-                        else if (logicType === 'num') col = getDynamicColor(val, stats.min, stats.max);
-                        return { fillColor: col, weight: 1, opacity: 1, color: 'white', fillOpacity: 0.8 };
-                    };
-
-                    lyr.eachLayer(function(layer) {
-                        var props = layer.feature.properties;
-                        // For popups, try to find the block name inside this layer
-                        var bName = props.Blocks || props.Block_Name || props.BLOCK_NAME || "Risk Zone";
-                        
-                        var valDisplay = props[colName];
-                        if (typeof valDisplay === 'number') valDisplay = Math.round(valDisplay * 100) / 100;
-
-                        var popup = `<div style="font-family:'Poppins';">
-                                        <h4 style="margin:0 0 5px 0;">${bName}</h4>
-                                        <span style="font-size:0.9rem; color:#555;">Value: <b>${valDisplay || 'No Data'}</b></span>
-                                     </div>`;
-                        layer.bindPopup(popup);
-                    });
-
-                    lyr.addData(data);
+                var stats = { min: 0, max: 100 };
+                
+                // If numerical, calculate specific min/max for THIS file
+                if (logicType === 'num') {
+                    stats = calculateStats(data, colName);
+                    // console.log(`Stats for ${url} using ${colName}:`, stats); 
                 }
+
+                lyr.options.style = function(feature) {
+                    var val = feature.properties[colName];
+                    var col = '#ccc';
+                    if (logicType === 'cat') col = getCatColor(val);
+                    else if (logicType === 'land') col = getLandColor(val);
+                    else if (logicType === 'pop') col = getPopColor(val);
+                    else if (logicType === 'num') col = getDynamicColor(val, stats.min, stats.max);
+                    
+                    return { fillColor: col, weight: 1, opacity: 1, color: 'white', fillOpacity: 0.8 };
+                };
+
+                lyr.eachLayer(function(layer) {
+                    // Popup content
+                    var props = layer.feature.properties;
+                    // Try to find a name for the popup, fallback to "Block"
+                    var bName = props.Blocks || props.Block_Name || props.BLOCK_NAME || "Block";
+                    
+                    var valDisplay = props[colName];
+                    if (typeof valDisplay === 'number') valDisplay = Math.round(valDisplay * 100) / 100;
+
+                    var popup = `<div style="font-family:'Poppins';">
+                                    <h4 style="margin:0 0 5px 0;">${bName}</h4>
+                                    <span style="font-size:0.9rem; color:#555;">
+                                        Value: <b>${valDisplay !== undefined ? valDisplay : 'No Data'}</b>
+                                    </span>
+                                 </div>`;
+                    layer.bindPopup(popup);
+                });
+
+                lyr.addData(data);
             }).catch(e => console.log('Pending: ' + url));
             return lyr;
         }
 
-        // --- INITIALIZE LAYERS ---
-        layers['pop'] = createLayer('data/population.json', 'pop');
-        layers['flood'] = createLayer('data/flood.json', 'cat');
-        layers['drought'] = createLayer('data/drought.json', 'cat');
-        layers['heat'] = createLayer('data/heatwave.json', 'num');
-        layers['lightning'] = createLayer('data/lightning.json', 'num'); 
-        layers['fire'] = createLayer('data/fire.json', 'num');
-        layers['quake'] = createLayer('data/earthquake.json', 'num');
-        layers['land'] = createLayer('data/landuse.json', 'land');
+        // --- INITIALIZE LAYERS (HARD-CODED COLUMNS) ---
+        // This ensures the exact right column is used for every file
+        
+        layers['pop'] = createLayer('data/population.json', 'pop', 'Pop');
+        layers['flood'] = createLayer('data/flood.json', 'cat', 'Risk Class');
+        layers['drought'] = createLayer('data/drought.json', 'cat', 'Risk Class');
+        
+        // Numerical Layers - Explicit Columns based on your JSONs
+        layers['heat'] = createLayer('data/heatwave.json', 'num', '_mean');
+        layers['lightning'] = createLayer('data/lightning.json', 'num', 'Total'); // Corrected to 'Total'
+        layers['fire'] = createLayer('data/fire.json', 'num', '_mean');
+        layers['quake'] = createLayer('data/earthquake.json', 'num', '_mean');
+        
+        layers['land'] = createLayer('data/landuse.json', 'land', 'Landuse_Class');
+
 
         // --- INTERACTION ---
         function toggleLayer(id) {
             if (currentLayer) map.removeLayer(currentLayer);
             
-            // 1. Add the Selected Layer
+            // 1. Add Hazard Layer
             if (layers[id]) {
                 currentLayer = layers[id];
                 map.addLayer(currentLayer);
                 if (currentLayer.getLayers().length > 0) map.fitBounds(currentLayer.getBounds());
             }
 
-            // 2. ALWAYS Add the Labels Layer on top (The Fix)
+            // 2. Ensure Names are ALWAYS on top (Label Overlay)
             if (!map.hasLayer(masterLabelLayer)) {
                 masterLabelLayer.addTo(map);
             }
-            masterLabelLayer.bringToFront(); // Force text to front
+            masterLabelLayer.bringToFront();
 
             updateUI(id);
         }
