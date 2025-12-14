@@ -129,7 +129,7 @@
             'flood': { title: "Flood Risk", desc: "Monsoon flooding analysis.", legend: [{col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'drought': { title: "Drought Risk", desc: "Agricultural drought vulnerability.", legend: [{col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'heat': { title: "Heatwave Risk", desc: "Land Surface Temp (LST).", legend: [{col:'#4a148c', lbl:'Extreme'}, {col:'#d32f2f', lbl:'Very High'}, {col:'#f57f17', lbl:'High'}, {col:'#fbc02d', lbl:'Moderate'}] },
-            // NEW LIGHTNING LEGEND
+            // UPDATED LIGHTNING LEGEND
             'lightning': { title: "Lightning Risk", desc: "Fatality counts (2022-2025).", legend: [{col:'#4a148c', lbl:'Very High (>9)'}, {col:'#d32f2f', lbl:'Mod. High (6-9)'}, {col:'#f57f17', lbl:'Moderate (3-6)'}, {col:'#388e3c', lbl:'Low (<3)'}] },
             'quake': { title: "Earthquake Risk", desc: "Seismic vulnerability index.", legend: [{col:'#4a148c', lbl:'High Risk'}, {col:'#d32f2f', lbl:'Mod-High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'fire': { title: "Fire Risk", desc: "Fire susceptibility index.", legend: [{col:'#4a148c', lbl:'Extreme'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
@@ -139,19 +139,14 @@
 
         // --- 1. COLUMN DETECTOR ---
         function detectColumn(props, type) {
-            // Lightning Specific Check
             if (type === 'lightning') {
                 if (props['Total'] !== undefined) return 'Total';
                 if (props['TOTAL'] !== undefined) return 'TOTAL';
-                if (props['_sum'] !== undefined) return '_sum'; // fallback
+                return 'Total'; // Force this column for lightning
             }
-            
-            // Standard Checks
             var candidates = ['Risk Class', 'Risk_Class', 'Total', '_mean', 'Mean', 'Pop', 'P_Total'];
             for (var c of candidates) { if (props[c] !== undefined) return c; }
-            
-            // Numerical Fallback
-            if (type === 'num' || type === 'lightning') {
+            if (type === 'num') {
                 for (var key in props) {
                     if (typeof props[key] === 'number' && key !== 'Id' && key !== 'ID' && key !== 'Shape_Area') return key;
                 }
@@ -159,7 +154,7 @@
             return 'Risk Class';
         }
 
-        // --- 2. STATS CALCULATOR ---
+        // --- 2. STATS (For Fire/Quake/Heat only) ---
         function calculateStats(data, colName) {
             var min = Infinity, max = -Infinity;
             data.features.forEach(f => {
@@ -177,16 +172,18 @@
 
         // --- 3. COLOR SCALES ---
         
-        // SPECIFIC LIGHTNING SCALE
+        // SIMPLE HARDCODED LIGHTNING SCALE
         function getLightningColor(d) {
             var num = parseFloat(d);
             if (isNaN(num)) return '#cccccc';
-            if (num > 9) return '#4a148c'; // Very High
-            if (num >= 6) return '#d32f2f'; // Moderately High
-            if (num >= 3) return '#f57f17'; // Moderate
-            return '#388e3c'; // Low (<3)
+            
+            if (num > 9) return '#4a148c'; // Very High (Purple)
+            if (num >= 6) return '#d32f2f'; // Mod High (Red)
+            if (num >= 3) return '#f57f17'; // Moderate (Orange)
+            return '#388e3c'; // Low (Green)
         }
 
+        // Dynamic for others (Fire/Quake)
         function getDynamicColor(d, min, max) {
             var num = parseFloat(d);
             if (isNaN(num)) return '#cccccc';
@@ -235,10 +232,10 @@
             fetch(url).then(r => r.json()).then(data => {
                 if (data.features.length > 0) {
                     var sampleProps = data.features[0].properties;
-                    // Use explicit column if provided (e.g., 'Total'), otherwise detect
                     var colName = explicitCol || detectColumn(sampleProps, logicType);
                     
                     var stats = { min: 0, max: 100 };
+                    // Only calculate stats for generic numerical layers, NOT Lightning (which is fixed)
                     if (logicType === 'num') {
                         stats = calculateStats(data, colName);
                     }
@@ -258,6 +255,7 @@
 
                     lyr.eachLayer(function(layer) {
                         var props = layer.feature.properties;
+                        // For popup name
                         var bName = props.Blocks || props.Block_Name || props.BLOCK_NAME || "Block";
                         var valDisplay = props[colName];
                         if (typeof valDisplay === 'number') valDisplay = Math.round(valDisplay * 100) / 100;
@@ -278,18 +276,21 @@
         }
 
         // --- INITIALIZE LAYERS ---
-        // Notice 'lightning' is now a special type
         
-        layers['pop'] = createLayer('data/population.json', 'pop');
-        layers['flood'] = createLayer('data/flood.json', 'cat');
-        layers['drought'] = createLayer('data/drought.json', 'cat');
+        layers['pop'] = createLayer('data/population.json', 'pop', 'Pop');
+        layers['flood'] = createLayer('data/flood.json', 'cat', 'Risk Class');
+        layers['drought'] = createLayer('data/drought.json', 'cat', 'Risk Class');
         
+        // Lightning uses specific type logic now
+        layers['lightning'] = createLayer('data/lightning.json', 'lightning', 'Total'); 
+        
+        // Others use dynamic math
         layers['heat'] = createLayer('data/heatwave.json', 'num', '_mean');
-        layers['lightning'] = createLayer('data/lightning.json', 'lightning', 'Total'); // Use specific lightning type
         layers['fire'] = createLayer('data/fire.json', 'num', '_mean');
         layers['quake'] = createLayer('data/earthquake.json', 'num', '_mean');
         
-        layers['land'] = createLayer('data/landuse.json', 'land');
+        layers['land'] = createLayer('data/landuse.json', 'land', 'Landuse_Class');
+
 
         // --- INTERACTION ---
         function toggleLayer(id) {
