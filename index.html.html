@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gaya Multi-Hazard Risk Atlas</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        #map { height: 100vh; width: 100%; }
+        
+        /* Floating Info Box */
+        .info {
+            padding: 8px 10px;
+            background: white;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            max-width: 300px;
+        }
+        .legend {
+            line-height: 18px;
+            color: #555;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        }
+        .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // 1. Initialize Map
+        var map = L.map('map').setView([24.7914, 85.0002], 10);
+
+        // 2. Base Maps
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map);
+        var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' });
+
+        // =========================================
+        // 3. STYLE FUNCTIONS (The Coloring Logic)
+        // =========================================
+
+        // A. Style for Risk Layers (High/Med/Low)
+        function getRiskColor(d) {
+            return d === 'High' || d === 'Very High' ? '#d32f2f' : // Red
+                   d === 'Moderate' || d === 'Med'   ? '#f57f17' : // Orange
+                   d === 'Low' || d === 'Very Low'   ? '#388e3c' : // Green
+                                                       '#cccccc';  // Gray
+        }
+
+        // B. Style for Population (Blue Gradient)
+        // Adjust numbers (50000, 100000) based on your real data range!
+        function getPopColor(d) {
+            return d > 200000 ? '#08306b' : // Very Dark Blue
+                   d > 100000 ? '#08519c' :
+                   d > 50000  ? '#4292c6' :
+                   d > 20000  ? '#9ecae1' :
+                                '#deebf7';  // Light Blue
+        }
+
+        // C. Style for Landuse (Categorical)
+        function getLanduseColor(d) {
+            return d === 'Builtup'     ? '#b71c1c' : // Red
+                   d === 'Agriculture' ? '#fbc02d' : // Yellow
+                   d === 'Forest'      ? '#1b5e20' : // Dark Green
+                   d === 'Water'       ? '#0277bd' : // Blue
+                                         '#bdbdbd';  // Gray
+        }
+
+        // D. Master Style Generator
+        function style(feature, type, column) {
+            var val = feature.properties[column]; 
+            var color;
+            
+            if (type === 'risk') color = getRiskColor(val);
+            else if (type === 'pop') color = getPopColor(val);
+            else if (type === 'land') color = getLanduseColor(val);
+
+            return { fillColor: color, weight: 1, opacity: 1, color: 'white', fillOpacity: 0.7 };
+        }
+
+        // 4. Interaction (Popup)
+        function onEachFeature(feature, layer) {
+            var popup = "<h3>" + (feature.properties.Block_Name || "Block Data") + "</h3>";
+            // Show all properties available in the file
+            for (var key in feature.properties) {
+                popup += "<b>" + key + ":</b> " + feature.properties[key] + "<br>";
+            }
+            layer.bindPopup(popup);
+        }
+
+        // =========================================
+        // 5. INITIALIZE LAYERS (Empty for now)
+        // =========================================
+        
+        // IMPORTANT: Replace 'Pop_2020' with the ACTUAL column name from your Mapshaper check
+        var popLayer = L.geoJson(null, { style: function(f) { return style(f, 'pop', 'Pop'); }, onEachFeature: onEachFeature });
+        var landLayer = L.geoJson(null, { style: function(f) { return style(f, 'land', 'Landuse_Class'); }, onEachFeature: onEachFeature });
+        
+        // Hazard Layers (Assuming column name is 'Risk_Class' - Change this if needed!)
+        var quakeLayer = L.geoJson(null, { style: function(f) { return style(f, 'risk', 'Risk_Class'); }, onEachFeature: onEachFeature });
+        var floodLayer = L.geoJson(null, { style: function(f) { return style(f, 'risk', 'Risk_Class'); }, onEachFeature: onEachFeature });
+        var heatLayer = L.geoJson(null, { style: function(f) { return style(f, 'risk', 'Risk_Class'); }, onEachFeature: onEachFeature });
+        var droughtLayer = L.geoJson(null, { style: function(f) { return style(f, 'risk', 'Risk_Class'); }, onEachFeature: onEachFeature });
+        var lightningLayer = L.geoJson(null, { style: function(f) { return style(f, 'risk', 'Risk_Class'); }, onEachFeature: onEachFeature });
+        var drowningLayer = L.geoJson(null, { style: function(f) { return style(f, 'risk', 'Risk_Class'); }, onEachFeature: onEachFeature });
+        var fireLayer = L.geoJson(null, { style: function(f) { return style(f, 'risk', 'Risk_Class'); }, onEachFeature: onEachFeature });
+
+        // =========================================
+        // 6. FETCH DATA (Load files)
+        // =========================================
+        
+        // Helper function to load data
+        function loadData(url, layer) {
+            fetch(url)
+                .then(res => {
+                    if (!res.ok) throw new Error("File not found");
+                    return res.json();
+                })
+                .then(data => layer.addData(data))
+                .catch(err => console.log("Waiting for layer: " + url));
+        }
+
+        // Load ALL layers (If file is missing, it will just be ignored quietly)
+        loadData('data/population.json', popLayer); // This one exists!
+        loadData('data/landuse.json', landLayer);
+        loadData('data/earthquake.json', quakeLayer);
+        loadData('data/flood.json', floodLayer);
+        loadData('data/heatwave.json', heatLayer);
+        loadData('data/drought.json', droughtLayer);
+        loadData('data/lightning.json', lightningLayer);
+        loadData('data/drowning.json', drowningLayer);
+        loadData('data/fire.json', fireLayer);
+
+        // =========================================
+        // 7. LAYER CONTROL (The Menu)
+        // =========================================
+        
+        var baseMaps = { "Street Map": osm, "Satellite": satellite };
+        
+        var overlayMaps = {
+            "1. Population Density": popLayer,
+            "2. Landuse Map": landLayer,
+            "3. Earthquake Risk": quakeLayer,
+            "4. Flood Risk": floodLayer,
+            "5. Heatwave Risk": heatLayer,
+            "6. Drought Risk": droughtLayer,
+            "7. Lightning Risk": lightningLayer,
+            "8. Drowning Risk": drowningLayer,
+            "9. Fire Risk": fireLayer
+        };
+
+        L.control.layers(baseMaps, overlayMaps, {collapsed: false}).addTo(map);
+
+        // 8. Legend
+        var legend = L.control({position: 'bottomright'});
+        legend.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'info legend');
+            div.innerHTML += "<b>Risk Levels</b><br>";
+            div.innerHTML += '<i style="background: #d32f2f"></i> High<br>';
+            div.innerHTML += '<i style="background: #f57f17"></i> Moderate<br>';
+            div.innerHTML += '<i style="background: #388e3c"></i> Low<br>';
+            div.innerHTML += '<hr><b>Population</b><br>';
+            div.innerHTML += '<i style="background: #08306b"></i> High<br>';
+            div.innerHTML += '<i style="background: #deebf7"></i> Low<br>';
+            return div;
+        };
+        legend.addTo(map);
+
+    </script>
+</body>
+</html>
