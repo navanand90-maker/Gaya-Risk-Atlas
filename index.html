@@ -102,66 +102,67 @@
         var layerInfo = {
             'flood': { title: "Flood Risk", desc: "Monsoon flooding analysis for river basins.", legend: [{col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
             'drought': { title: "Drought Risk", desc: "Agricultural drought vulnerability.", legend: [{col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
-            'heat': { title: "Heatwave Risk", desc: "Land Surface Temp (LST) Anomaly.", legend: [{col:'#b91c1c', lbl:'Very High (>52°)'}, {col:'#d32f2f', lbl:'High (48-52°)'}, {col:'#f57f17', lbl:'Moderate (<48°)'}] },
-            'lightning': { title: "Lightning Risk", desc: "Total fatality counts (2022-2025).", legend: [{col:'#b91c1c', lbl:'Very High (>15)'}, {col:'#d32f2f', lbl:'High (10-15)'}, {col:'#f57f17', lbl:'Moderate (<10)'}] },
-            'quake': { title: "Earthquake Risk", desc: "Seismic vulnerability index.", legend: [{col:'#d32f2f', lbl:'High Risk'}, {col:'#f57f17', lbl:'Moderate Risk'}, {col:'#388e3c', lbl:'Low Risk'}] },
-            'fire': { title: "Fire Risk", desc: "Fire susceptibility index (0.0 - 1.0).", legend: [{col:'#b91c1c', lbl:'Very High (>0.5)'}, {col:'#d32f2f', lbl:'High (0.3-0.5)'}, {col:'#f57f17', lbl:'Moderate (<0.3)'}] },
+            // UPDATED LEGENDS TO MATCH NEW CONTRAST SCALES
+            'heat': { title: "Heatwave Risk", desc: "Land Surface Temp (LST) Anomaly. Critical threshold >53°C.", legend: [{col:'#4a148c', lbl:'Extreme (>54°)'}, {col:'#d32f2f', lbl:'High (53-54°)'}, {col:'#f57f17', lbl:'Moderate (52-53°)'}, {col:'#fbc02d', lbl:'Low (<52°)'}] },
+            'lightning': { title: "Lightning Risk", desc: "Total fatality counts (2022-2025).", legend: [{col:'#4a148c', lbl:'Critical (>15)'}, {col:'#d32f2f', lbl:'High (10-15)'}, {col:'#f57f17', lbl:'Moderate (5-10)'}, {col:'#fbc02d', lbl:'Low (<5)'}] },
+            'quake': { title: "Earthquake Risk", desc: "Seismic vulnerability index.", legend: [{col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
+            'fire': { title: "Fire Risk", desc: "Fire susceptibility index.", legend: [{col:'#d32f2f', lbl:'High (>0.5)'}, {col:'#f57f17', lbl:'Moderate (0.3-0.5)'}, {col:'#388e3c', lbl:'Low (<0.3)'}] },
             'pop': { title: "Population Density", desc: "Total population distribution.", legend: [{col:'#08306b', lbl:'Very High'}, {col:'#4292c6', lbl:'High'}, {col:'#deebf7', lbl:'Low'}] },
             'land': { title: "Landuse Map", desc: "Land cover classification.", legend: [{col:'#b71c1c', lbl:'Builtup'}, {col:'#fbc02d', lbl:'Agriculture'}, {col:'#1b5e20', lbl:'Forest'}] }
         };
 
-        // --- SPECIFIC COLOR SCALES FOR EACH HAZARD ---
+        // --- HIGH CONTRAST COLOR SCALES ---
         function getHazardColor(d, type) {
             var num = parseFloat(d);
-            if (isNaN(num)) return '#cccccc'; // Grey for No Data
+            if (isNaN(num)) return '#cccccc'; 
 
-            // 1. HEATWAVE (Range: ~35 to 55 degrees)
+            // 1. HEATWAVE (Very Tight Scale: 52 - 55 degrees)
             if (type === 'heat') {
-                return num > 52 ? '#b91c1c' : // Very High (Dark Red)
-                       num > 48 ? '#d32f2f' : // High (Red)
-                       num > 44 ? '#f57f17' : // Moderate (Orange)
-                       num > 40 ? '#fbc02d' : // Low (Yellow)
-                                  '#388e3c';  // Very Low (Green)
+                return num > 54.0 ? '#4a148c' : // Extreme (Deep Purple)
+                       num > 53.5 ? '#b91c1c' : // Very High (Dark Red)
+                       num > 53.0 ? '#d32f2f' : // High (Red)
+                       num > 52.5 ? '#f57f17' : // Moderate (Orange)
+                       num > 52.0 ? '#fbc02d' : // Low (Yellow)
+                                    '#388e3c';  // Safe (Green)
             }
 
-            // 2. FIRE (Range: ~0.1 to 0.6 Index)
+            // 2. FIRE (Range: ~0.3 to 0.6)
             if (type === 'fire') {
-                return num > 0.5 ? '#b91c1c' :
-                       num > 0.35 ? '#d32f2f' :
-                       num > 0.25 ? '#f57f17' :
-                       num > 0.15 ? '#fbc02d' :
-                                    '#388e3c';
+                return num > 0.50 ? '#d32f2f' : // High (Red)
+                       num > 0.40 ? '#f57f17' : // Moderate (Orange)
+                       num > 0.35 ? '#fbc02d' : // Caution (Yellow)
+                                    '#388e3c';  // Low (Green)
             }
 
-            // 3. LIGHTNING (Range: ~0 to 20 Deaths)
+            // 3. LIGHTNING (Range: 0 to 16 deaths)
             if (type === 'lightning') {
-                return num > 12 ? '#b91c1c' :
-                       num > 8  ? '#d32f2f' :
-                       num > 4  ? '#f57f17' :
-                                  '#388e3c';
+                return num >= 15 ? '#4a148c' : // Critical (Purple)
+                       num >= 10 ? '#d32f2f' : // High (Red)
+                       num >= 5  ? '#f57f17' : // Moderate (Orange)
+                       num >= 2  ? '#fbc02d' : // Low (Yellow)
+                                   '#388e3c';  // None/Very Low (Green)
             }
 
-            // 4. EARTHQUAKE (Range: ~0 to 1 Index)
+            // 4. EARTHQUAKE (Assumed Index 0-1)
             if (type === 'quake') {
-                return num > 0.6 ? '#b91c1c' :
-                       num > 0.4 ? '#d32f2f' :
-                       num > 0.2 ? '#f57f17' :
+                return num > 0.6 ? '#d32f2f' :
+                       num > 0.4 ? '#f57f17' :
                                    '#388e3c';
             }
 
-            // 5. POPULATION (Range: 0 to 300,000+)
+            // 5. POPULATION (High Contrast Blue)
             if (type === 'pop') {
-                return num > 250000 ? '#08306b' :
+                return num > 250000 ? '#08306b' : // Very Dark Blue
                        num > 150000 ? '#08519c' :
                        num > 100000 ? '#2171b5' :
                        num > 50000  ? '#6baed6' :
-                                      '#deebf7';
+                                      '#deebf7'; // Very Light Blue
             }
 
             return '#ccc';
         }
 
-        // Standard Text Categorical Color (Flood/Drought)
+        // Categorical (Flood/Drought - Text based)
         function getCatColor(d) {
             if (!d) return '#ccc';
             var val = d.toString().toLowerCase();
@@ -193,16 +194,14 @@
 
                     if (logicType === 'cat') col = getCatColor(val);
                     else if (logicType === 'land') col = getLandColor(val);
-                    else col = getHazardColor(val, logicType); // logicType = 'heat', 'fire', etc.
+                    else col = getHazardColor(val, logicType); 
 
-                    return { fillColor: col, weight: 1, opacity: 1, color: 'white', fillOpacity: 0.7 };
+                    return { fillColor: col, weight: 1, opacity: 1, color: 'white', fillOpacity: 0.75 }; // Increased opacity for contrast
                 },
                 onEachFeature: function(feature, layer) {
                     var props = feature.properties;
-                    // Detect Name
                     var bName = props.Blocks || props.Block_Name || props.BLOCK_NAME || "Risk Zone";
                     
-                    // Show label only if it's a Block (not a grid)
                     if (bName !== "Risk Zone") {
                         layer.bindTooltip(bName, { permanent: true, direction: "center", className: "block-label" });
                     }
@@ -222,22 +221,17 @@
             return lyr;
         }
 
-        // --- INITIALIZE LAYERS (Mapped to your specific columns) ---
-        
+        // --- INITIALIZE LAYERS ---
         layers['pop'] = createLayer('data/population.json', 'pop', 'Pop');
-        
-        // Categorical (Grid Data)
         layers['flood'] = createLayer('data/flood.json', 'cat', 'Risk Class');
         layers['drought'] = createLayer('data/drought.json', 'cat', 'Risk Class');
-
-        // Numerical (Block Data - Using specific logic for each)
+        
+        // Numerical Layers with new scales
         layers['heat'] = createLayer('data/heatwave.json', 'heat', '_mean');
         layers['lightning'] = createLayer('data/lightning.json', 'lightning', 'Total');
         layers['fire'] = createLayer('data/fire.json', 'fire', '_mean');
-        layers['quake'] = createLayer('data/earthquake.json', 'quake', '_mean'); // Assumes _mean matches Fire scale
-
+        layers['quake'] = createLayer('data/earthquake.json', 'quake', '_mean');
         layers['land'] = createLayer('data/landuse.json', 'land', 'Landuse_Class');
-
 
         // --- INTERACTION ---
         function toggleLayer(id) {
