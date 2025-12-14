@@ -4,126 +4,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gaya District Risk Atlas</title>
-    
-    <!-- Modern Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <!-- Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
         :root {
-            --bg-dark: #1e1e24;
-            --accent: #ffd166;
-            --text-light: #f8f9fa;
-            --text-muted: #adb5bd;
-            --header-bg: #ffffff;
-            --border-color: #2b2b36;
+            --bg-dark: #1e1e24; --accent: #ffd166; --text-light: #f8f9fa;
+            --text-muted: #adb5bd; --header-bg: #ffffff; --border-color: #2b2b36;
         }
-
-        body { 
-            margin: 0; padding: 0; 
-            font-family: 'Poppins', sans-serif; 
-            display: flex; flex-direction: column; 
-            height: 100vh; overflow: hidden; 
-            background-color: var(--bg-dark);
-        }
-
-        /* --- HEADER --- */
-        header {
-            background-color: var(--header-bg);
-            color: #333;
-            height: 65px;
-            padding: 0 30px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            z-index: 2000;
-            border-bottom: 3px solid var(--accent);
-        }
-
+        body { margin: 0; padding: 0; font-family: 'Poppins', sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; background-color: var(--bg-dark); }
+        
+        header { background-color: var(--header-bg); color: #333; height: 65px; padding: 0 30px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(0,0,0,0.05); z-index: 2000; border-bottom: 3px solid var(--accent); }
         .brand { display: flex; align-items: center; gap: 15px; }
         .brand h1 { font-size: 1.4rem; font-weight: 600; margin: 0; color: #111; }
         .brand span { font-size: 0.8rem; font-weight: 400; color: #666; background: #eee; padding: 4px 10px; border-radius: 20px; }
-        
         .logos { display: flex; align-items: center; gap: 20px; }
         .logo-img { height: 45px; width: auto; vertical-align: middle; }
 
-        /* --- CONTAINER & SIDEBAR --- */
         .container { display: flex; flex: 1; height: calc(100vh - 65px); }
-
-        .sidebar {
-            width: 380px;
-            background-color: var(--bg-dark);
-            color: var(--text-light);
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            border-right: 1px solid #111;
-            box-shadow: 5px 0 15px rgba(0,0,0,0.2);
-            z-index: 1000;
-        }
-
+        .sidebar { width: 380px; background-color: var(--bg-dark); color: var(--text-light); display: flex; flex-direction: column; overflow-y: auto; border-right: 1px solid #111; box-shadow: 5px 0 15px rgba(0,0,0,0.2); z-index: 1000; }
         .sidebar-scroll { padding: 25px; }
-
-        .section-title {
-            font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted);
-            letter-spacing: 1.5px; margin-bottom: 15px; margin-top: 10px;
-            font-weight: 600; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;
-        }
-
-        .info-card {
-            background: #2b2b36; padding: 20px; border-radius: 12px; margin-bottom: 30px;
-            border-left: 4px solid var(--accent); box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
+        .section-title { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1.5px; margin-bottom: 15px; margin-top: 10px; font-weight: 600; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+        
+        .info-card { background: #2b2b36; padding: 20px; border-radius: 12px; margin-bottom: 30px; border-left: 4px solid var(--accent); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .info-card h2 { margin: 0 0 10px 0; font-size: 1.2rem; color: var(--accent); }
         .info-card p { font-size: 0.9rem; line-height: 1.6; color: #e0e0e0; margin: 0; font-weight: 300; }
 
-        /* --- LEGEND --- */
-        .legend-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;
-            background: #25252f; padding: 15px; border-radius: 8px;
-        }
+        .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; background: #25252f; padding: 15px; border-radius: 8px; }
         .legend-item { display: flex; align-items: center; font-size: 0.8rem; color: #ddd; }
         .color-dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; flex-shrink: 0; }
 
-        /* --- BUTTONS --- */
         .nav-grid { display: flex; flex-direction: column; gap: 8px; }
-        .layer-btn {
-            display: flex; align-items: center; width: 100%; padding: 14px 20px;
-            background: transparent; border: 1px solid var(--border-color); border-radius: 8px;
-            color: var(--text-muted); font-family: 'Poppins', sans-serif; font-size: 0.95rem;
-            cursor: pointer; transition: all 0.3s ease;
-        }
+        .layer-btn { display: flex; align-items: center; width: 100%; padding: 14px 20px; background: transparent; border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-muted); font-family: 'Poppins', sans-serif; font-size: 0.95rem; cursor: pointer; transition: all 0.3s ease; }
         .layer-btn:hover { background: rgba(255, 255, 255, 0.05); color: white; border-color: #555; }
-        .layer-btn.active {
-            background-color: var(--accent); color: #1a1a1a; border-color: var(--accent);
-            font-weight: 600; box-shadow: 0 0 15px rgba(255, 209, 102, 0.4); transform: scale(1.02);
-        }
-        .layer-btn.active i { color: #1a1a1a; }
+        .layer-btn.active { background-color: var(--accent); color: #1a1a1a; border-color: var(--accent); font-weight: 600; box-shadow: 0 0 15px rgba(255, 209, 102, 0.4); transform: scale(1.02); }
         .layer-btn i { width: 25px; text-align: center; margin-right: 15px; font-size: 1.1rem; }
+        .layer-btn.active i { color: #1a1a1a; }
 
-        /* --- MAP & LABELS (THE FIX) --- */
         #map { flex: 1; background-color: #e5e5e5; }
-
-        /* This removes the white box and makes the label look clean */
-        .leaflet-tooltip.block-label {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            font-size: 10px;
-            font-weight: 600;
-            color: #333;
-            text-transform: uppercase;
-            text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; /* White Halo */
-        }
+        .leaflet-tooltip.block-label { background: transparent !important; border: none !important; box-shadow: none !important; font-size: 10px; font-weight: 600; color: #333; text-transform: uppercase; text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; }
     </style>
 </head>
 <body>
 
-    <!-- HEADER -->
     <header>
         <div class="brand">
             <i class="fas fa-layer-group fa-lg" style="color: #1a1a1a;"></i>
@@ -132,15 +56,12 @@
         </div>
         <div class="logos">
             <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Seal_of_Bihar.png" class="logo-img" title="Government of Bihar">
-            <!-- Ensure this file exists in your GitHub repo! -->
             <img src="bsdma_logo.jpg" class="logo-img" onerror="this.style.display='none'" title="BSDMA">
             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/United_Nations_Development_Programme_logo.svg/1200px-United_Nations_Development_Programme_logo.svg.png" class="logo-img" title="UNDP">
         </div>
     </header>
 
-    <!-- CONTAINER -->
     <div class="container">
-        <!-- SIDEBAR -->
         <aside class="sidebar">
             <div class="sidebar-scroll">
                 <div class="info-card" id="dynamic-content">
@@ -151,11 +72,7 @@
                     <div class="section-title">Legend</div>
                     <div id="dynamic-legend" class="legend-grid"></div>
                 </div>
-                <div class="section-title">Multi-Hazard Overview</div>
-                <div class="nav-grid">
-                    <button class="layer-btn" onclick="toggleLayer('multi')"><i class="fas fa-globe-asia"></i> Multi-Hazard Index</button>
-                </div>
-                <div class="section-title" style="margin-top: 25px;">Natural Hazards</div>
+                <div class="section-title">Natural Hazards</div>
                 <div class="nav-grid">
                     <button class="layer-btn" onclick="toggleLayer('flood')"><i class="fas fa-water"></i> Flood Risk</button>
                     <button class="layer-btn" onclick="toggleLayer('drought')"><i class="fas fa-sun"></i> Drought Risk</button>
@@ -174,64 +91,54 @@
         <div id="map"></div>
     </div>
 
-    <!-- SCRIPTS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 1. MAP INIT & BASE LAYERS
-        // Define the two background options
-        var lightMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap, © CartoDB'
-        });
-
-        var satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles © Esri'
-        });
-
-        // Initialize Map with 'lightMap' as default
-        var map = L.map('map', { 
-            zoomControl: false, 
-            layers: [lightMap] // Default layer
-        }).setView([24.7914, 85.0002], 10);
-
-        // Add Zoom Control (Bottom Right)
+        var lightMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap, © CartoDB' });
+        var satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri' });
+        var map = L.map('map', { zoomControl: false, layers: [lightMap] }).setView([24.7914, 85.0002], 10);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
+        L.control.layers({ "Clean Map": lightMap, "Satellite": satelliteMap }, null, { position: 'topright' }).addTo(map);
 
-        // Add Base Map Switcher (Top Right)
-        var baseMaps = {
-            "Clean Map": lightMap,
-            "Satellite": satelliteMap
-        };
-        L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
-
-
-        // 2. DATA CONFIG (Same as before)
         var layerInfo = {
-            'multi': { title: "Multi-Hazard Context", desc: "Gaya district is exposed to multiple natural hazards. Risk is unevenly distributed across blocks.", legend: [{col:'#b91c1c', lbl:'Very High'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
-            'flood': { title: "Flood Risk Analysis", desc: "Recurrent monsoon flooding affects Manpur, Bodh Gaya, and Atri due to river overflow.", legend: [{col:'#d32f2f', lbl:'High Risk'}, {col:'#f57f17', lbl:'Moderate Risk'}, {col:'#388e3c', lbl:'Low Risk'}] },
-            'drought': { title: "Drought Risk Analysis", desc: "Southern blocks face water stress and groundwater depletion.", legend: [{col:'#d32f2f', lbl:'High Risk'}, {col:'#f57f17', lbl:'Moderate Risk'}, {col:'#388e3c', lbl:'Low Risk'}] },
-            'heat': { title: "Heatwave Risk", desc: "Extreme heat events in urban areas exceed safe thresholds.", legend: [{col:'#b91c1c', lbl:'Very High'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}] },
-            'lightning': { title: "Lightning Risk", desc: "High fatality risk in rural blocks during pre-monsoon storms.", legend: [{col:'#d32f2f', lbl:'High Risk'}, {col:'#f57f17', lbl:'Moderate Risk'}, {col:'#388e3c', lbl:'Low Risk'}] },
-            'quake': { title: "Earthquake Risk", desc: "Moderate seismic zone. Dense settlements are vulnerable.", legend: [{col:'#f57f17', lbl:'Moderate Zone'}, {col:'#388e3c', lbl:'Low Zone'}] },
-            'fire': { title: "Fire Risk", desc: "Urban wards and dense villages face high fire risk.", legend: [{col:'#d32f2f', lbl:'High Risk'}, {col:'#f57f17', lbl:'Moderate Risk'}, {col:'#388e3c', lbl:'Low Risk'}] },
-            'pop': { title: "Population Density", desc: "Visualizes population concentration for evacuation planning.", legend: [{col:'#08306b', lbl:'Very High'}, {col:'#4292c6', lbl:'High'}, {col:'#deebf7', lbl:'Low'}] },
-            'land': { title: "Landuse Map", desc: "Classification of built-up, agriculture, and forest areas.", legend: [{col:'#b71c1c', lbl:'Builtup'}, {col:'#fbc02d', lbl:'Agriculture'}, {col:'#1b5e20', lbl:'Forest'}] }
+            'flood': { title: "Flood Risk", desc: "Monsoon flooding analysis for river basins.", legend: [{col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
+            'drought': { title: "Drought Risk", desc: "Agricultural drought vulnerability based on rainfall.", legend: [{col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}] },
+            'heat': { title: "Heatwave Risk", desc: "Average Land Surface Temperature (LST).", legend: [{col:'#b91c1c', lbl:'Very High (>50°)'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}] },
+            'lightning': { title: "Lightning Risk", desc: "Total fatality counts per block (2022-2025).", legend: [{col:'#b91c1c', lbl:'High (>10)'}, {col:'#d32f2f', lbl:'Moderate'}, {col:'#f57f17', lbl:'Low'}] },
+            'quake': { title: "Earthquake Risk", desc: "Seismic vulnerability distribution.", legend: [{col:'#d32f2f', lbl:'Higher Risk'}, {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Lower'}] },
+            'fire': { title: "Fire Risk", desc: "Fire susceptibility index based on density.", legend: [{col:'#b91c1c', lbl:'Very High'}, {col:'#d32f2f', lbl:'High'}, {col:'#f57f17', lbl:'Moderate'}] },
+            'pop': { title: "Population Density", desc: "Total population distribution.", legend: [{col:'#08306b', lbl:'Very High'}, {col:'#4292c6', lbl:'High'}, {col:'#deebf7', lbl:'Low'}] },
+            'land': { title: "Landuse Map", desc: "Land cover classification.", legend: [{col:'#b71c1c', lbl:'Builtup'}, {col:'#fbc02d', lbl:'Agriculture'}, {col:'#1b5e20', lbl:'Forest'}] }
         };
 
-        // 3. COLOR LOGIC
+        // --- COLOR FUNCTIONS ---
+        // 1. Categorical Risk (Text)
         function getRiskColor(d) {
             if (!d) return '#ccc';
             var val = d.toString().toLowerCase();
             if (val.includes('very high')) return '#b91c1c';
             if (val.includes('high')) return '#d32f2f';
-            if (val.includes('mod')) return '#f57f17';
+            if (val.includes('mod') || val.includes('med')) return '#f57f17';
             if (val.includes('low')) return '#388e3c';
             return '#ccc';
         }
+        // 2. Numerical Hazard Risk (Red Gradient for Heat, Fire, Lightning)
+        function getNumRiskColor(d, maxVal) {
+            var num = parseFloat(d);
+            if (isNaN(num)) return '#ccc';
+            // Simple scale: if value is > 75% of max, it's dark red
+            if (num > (maxVal * 0.8)) return '#b91c1c';
+            if (num > (maxVal * 0.6)) return '#d32f2f';
+            if (num > (maxVal * 0.4)) return '#f57f17';
+            if (num > (maxVal * 0.2)) return '#fca5a5';
+            return '#fee2e2';
+        }
+        // 3. Population (Blue Gradient)
         function getPopColor(d) {
             var num = parseFloat(d);
             if (isNaN(num)) return '#ccc';
             return num > 250000 ? '#08306b' : num > 150000 ? '#08519c' : num > 100000 ? '#2171b5' : num > 50000 ? '#6baed6' : '#deebf7';
         }
+        // 4. Landuse
         function getLandColor(d) {
             if (!d) return '#ccc';
             var val = d.toString().toLowerCase();
@@ -241,7 +148,7 @@
             return '#ccc';
         }
 
-        // 4. LAYER FACTORY
+        // --- LAYER FACTORY ---
         var layers = {};
         var currentLayer = null;
 
@@ -249,31 +156,35 @@
             var lyr = L.geoJson(null, {
                 style: function(feature) {
                     var val = feature.properties[colName];
-                    var col = type === 'risk' ? getRiskColor(val) : type === 'pop' ? getPopColor(val) : getLandColor(val);
+                    var col = '#ccc';
+                    
+                    if (type === 'risk_cat') col = getRiskColor(val);
+                    else if (type === 'pop') col = getPopColor(val);
+                    else if (type === 'land') col = getLandColor(val);
+                    else if (type === 'risk_num_heat') col = getNumRiskColor(val, 60); // Max Temp ~60
+                    else if (type === 'risk_num_fire') col = getNumRiskColor(val, 60); // Max Index ~60
+                    else if (type === 'risk_num_light') col = getNumRiskColor(val, 20); // Max Deaths ~20
+                    else if (type === 'risk_num_quake') col = getNumRiskColor(val, 1); // Max Index ~1
+
                     return { fillColor: col, weight: 1, opacity: 1, color: 'white', fillOpacity: 0.7 };
                 },
                 onEachFeature: function(feature, layer) {
                     var props = feature.properties;
-                    // FIX 1: Look for "Blocks" as the name key based on your file
-                    var bName = props.Blocks || props.Block_Name || props.BLOCK_NAME || "Block"; 
+                    // Detect Block Name: Look for "Blocks" first (new files), then "Block_Name", then fallback
+                    var bName = props.Blocks || props.Block_Name || props.BLOCK_NAME || "Risk Zone"; 
                     
-                    // FIX 2: Add Transparent Tooltip (The Name Label)
-                    layer.bindTooltip(bName, {
-                        permanent: true,
-                        direction: "center",
-                        className: "block-label"
-                    });
+                    // Only show label if it's a real block name
+                    if (bName !== "Risk Zone") {
+                        layer.bindTooltip(bName, { permanent: true, direction: "center", className: "block-label" });
+                    }
 
-                    // FIX 3: Popup reads the specific column
-                    var displayVal = props[colName];
-                    if (displayVal === undefined || displayVal === null) displayVal = "No Data";
-                    else if (type === 'pop') displayVal = Math.round(displayVal).toLocaleString();
+                    var valDisplay = props[colName];
+                    if (valDisplay === undefined || valDisplay === null) valDisplay = "No Data";
+                    else if (typeof valDisplay === 'number') valDisplay = Math.round(valDisplay * 100) / 100; // Round to 2 decimals
 
                     var popup = `<div style="font-family:'Poppins';">
                                     <h4 style="margin:0 0 5px 0;">${bName}</h4>
-                                    <span style="font-size:0.9rem; color:#555;">
-                                        Value: <b>${displayVal}</b>
-                                    </span>
+                                    <span style="font-size:0.9rem; color:#555;">Data: <b>${valDisplay}</b></span>
                                  </div>`;
                     layer.bindPopup(popup);
                 }
@@ -282,19 +193,34 @@
             return lyr;
         }
 
-        // 5. INITIALIZE LAYERS
-        layers['pop'] = createLayer('data/population.json', 'pop', 'Pop');
+        // --- INITIALIZE LAYERS (Based on your JSON structure) ---
         
-        layers['multi'] = createLayer('data/multihazard.json', 'risk', 'Risk_Class');
-        layers['flood'] = createLayer('data/flood.json', 'risk', 'Risk_Class');
-        layers['drought'] = createLayer('data/drought.json', 'risk', 'Risk_Class');
-        layers['heat'] = createLayer('data/heatwave.json', 'risk', 'Risk_Class');
-        layers['lightning'] = createLayer('data/lightning.json', 'risk', 'Risk_Class');
-        layers['quake'] = createLayer('data/earthquake.json', 'risk', 'Risk_Class');
-        layers['fire'] = createLayer('data/fire.json', 'risk', 'Risk_Class');
+        // 1. POPULATION (Confirmed: 'Pop')
+        layers['pop'] = createLayer('data/population.json', 'pop', 'Pop');
+
+        // 2. FLOOD (Grid Data: 'Risk Class')
+        layers['flood'] = createLayer('data/flood.json', 'risk_cat', 'Risk Class');
+
+        // 3. DROUGHT (Grid Data: 'Risk Class')
+        layers['drought'] = createLayer('data/drought.json', 'risk_cat', 'Risk Class');
+
+        // 4. HEATWAVE (Block Data: '_mean' is the temp)
+        layers['heat'] = createLayer('data/heatwave.json', 'risk_num_heat', '_mean');
+
+        // 5. LIGHTNING (Block Data: 'Total' is deaths)
+        layers['lightning'] = createLayer('data/lightning.json', 'risk_num_light', 'Total');
+
+        // 6. FIRE (Block Data: '_mean' is risk index)
+        layers['fire'] = createLayer('data/fire.json', 'risk_num_fire', '_mean');
+
+        // 7. EARTHQUAKE (Block Data: '_mean' seems to be the stat)
+        layers['quake'] = createLayer('data/earthquake.json', 'risk_num_quake', '_mean');
+
+        // 8. LANDUSE
         layers['land'] = createLayer('data/landuse.json', 'land', 'Landuse_Class');
 
-        // 6. INTERACTION
+
+        // --- INTERACTION ---
         function toggleLayer(id) {
             if (currentLayer) map.removeLayer(currentLayer);
             if (layers[id]) {
@@ -308,9 +234,8 @@
         function updateUI(id) {
             var data = layerInfo[id];
             document.getElementById('dynamic-content').innerHTML = `<h2>${data.title}</h2><p>${data.desc}</p>`;
-            var legWrap = document.getElementById('legend-wrapper');
             var legBox = document.getElementById('dynamic-legend');
-            legWrap.style.display = 'block';
+            document.getElementById('legend-wrapper').style.display = 'block';
             legBox.innerHTML = '';
             data.legend.forEach(item => {
                 legBox.innerHTML += `<div class="legend-item"><div class="color-dot" style="background:${item.col}"></div>${item.lbl}</div>`;
