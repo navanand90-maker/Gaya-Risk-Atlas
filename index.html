@@ -3,129 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gaya Risk Atlas v6.0 - Integrated Analysis</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <title>Gaya Risk Atlas v7.0 - Precision Focus</title>
+    
+    <!-- Fonts: Inter for UI, Roboto Slab for Headers -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
         :root {
-            --bg-dark: #1a1a1d; --panel-bg: #25252b; --accent: #ffd166; 
-            --text: #e0e0e0; --border: #333;
+            --bg-dark: #121212; 
+            --panel-bg: #1e1e1e; 
+            --accent: #00bcd4; /* Cyan accent for visibility against dark */
+            --text-main: #e0e0e0;
+            --border: #333;
         }
-        body { margin: 0; font-family: 'Poppins', sans-serif; display: flex; flex-direction: column; height: 100vh; background: var(--bg-dark); color: var(--text); overflow: hidden; }
-        
-        /* Header */
-        header { background: #fff; color: #222; height: 60px; padding: 0 25px; display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid var(--accent); z-index: 2000; }
-        .brand h1 { font-size: 1.3rem; margin: 0; font-weight: 700; display: inline-block; }
-        .brand span { background: #d32f2f; color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; vertical-align: middle; margin-left: 10px; }
-        .logos img { height: 40px; margin-left: 15px; }
 
-        /* Layout */
+        body { margin: 0; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; height: 100vh; background: var(--bg-dark); color: var(--text-main); overflow: hidden; }
+        
+        /* HEADER */
+        header { background: #222; height: 60px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--accent); z-index: 2000; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .brand { display: flex; align-items: center; gap: 15px; }
+        .brand h1 { font-family: 'Roboto Slab', serif; font-size: 1.4rem; margin: 0; letter-spacing: 0.5px; color: #fff; }
+        .tag { background: var(--accent); color: #000; font-weight: 700; font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; }
+        .logos img { height: 38px; margin-left: 10px; opacity: 0.9; transition: opacity 0.3s; }
+        .logos img:hover { opacity: 1; }
+
+        /* LAYOUT */
         .container { display: flex; flex: 1; height: calc(100vh - 60px); }
         
-        /* Sidebar */
-        .sidebar { width: 400px; background: var(--bg-dark); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 1000; box-shadow: 4px 0 15px rgba(0,0,0,0.3); }
-        .sidebar-content { padding: 20px; overflow-y: auto; flex: 1; }
+        /* SIDEBAR */
+        .sidebar { width: 380px; background: var(--panel-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 1000; overflow-y: auto; }
+        .sidebar-pad { padding: 20px; }
 
-        /* Block Selector */
-        .selector-box { background: var(--panel-bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--accent); }
-        .selector-box label { font-size: 0.8rem; color: var(--accent); font-weight: 600; text-transform: uppercase; }
-        select { width: 100%; padding: 10px; margin-top: 8px; background: #111; color: white; border: 1px solid #444; border-radius: 4px; font-family: inherit; }
+        /* SECTIONS */
+        .mode-section { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #333; }
+        .section-header { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.5px; color: #888; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; font-weight: 600; }
+        .section-header i { color: var(--accent); }
 
-        /* Block Profile Table */
-        #block-profile { display: none; margin-top: 15px; }
-        .profile-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        .profile-table td { padding: 6px; border-bottom: 1px solid #333; }
-        .profile-table td:first-child { color: #aaa; }
-        .profile-table td:last-child { font-weight: 600; text-align: right; }
-        .risk-badge { padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
-
-        /* Layer Buttons */
-        .section-title { font-size: 0.75rem; text-transform: uppercase; color: #888; letter-spacing: 1px; margin: 25px 0 10px 0; border-bottom: 1px solid #333; padding-bottom: 5px; }
-        .layer-btn { width: 100%; text-align: left; background: transparent; color: #ccc; padding: 12px; border: 1px solid #333; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; }
-        .layer-btn:hover { background: #333; color: white; }
-        .layer-btn.active { background: var(--accent); color: #111; font-weight: 600; border-color: var(--accent); }
-        .layer-btn i { width: 25px; text-align: center; margin-right: 10px; }
-
-        /* Dynamic Info Panel */
-        .info-panel { background: var(--panel-bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .info-panel h3 { margin: 0 0 5px 0; color: var(--accent); font-size: 1.1rem; }
-        .info-panel p { font-size: 0.85rem; line-height: 1.5; color: #ccc; margin-bottom: 10px; }
+        /* BUTTONS */
+        .grid-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .layer-btn { background: #2a2a2a; color: #ccc; border: 1px solid #444; padding: 10px 12px; border-radius: 6px; cursor: pointer; text-align: left; font-size: 0.85rem; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+        .layer-btn:hover { background: #333; border-color: #666; color: #fff; }
+        .layer-btn.active { background: rgba(0, 188, 212, 0.15); border-color: var(--accent); color: var(--accent); font-weight: 600; }
         
-        /* Risk Lists */
-        .risk-list-box { background: #111; padding: 10px; border-radius: 6px; max-height: 150px; overflow-y: auto; font-size: 0.8rem; border: 1px solid #333; }
-        .risk-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #222; }
-        
-        /* Legend */
-        .legend-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 10px 0; }
-        .legend-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: #888; }
+        /* DROPDOWN */
+        .block-select-wrapper { position: relative; }
+        select { width: 100%; padding: 12px; background: #111; color: #fff; border: 1px solid #444; border-radius: 6px; font-family: 'Inter'; font-size: 0.9rem; appearance: none; cursor: pointer; }
+        select:focus { outline: none; border-color: var(--accent); }
+        .select-arrow { position: absolute; right: 15px; top: 15px; pointer-events: none; color: var(--accent); font-size: 0.8rem; }
 
-        /* Map */
-        #map { flex: 1; background: #ddd; }
-        .leaflet-tooltip.block-label { background: transparent; border: none; box-shadow: none; font-weight: 700; color: #333; text-shadow: 2px 2px 0px #fff; font-family: 'Poppins'; }
+        /* LEGEND PANEL */
+        #active-legend { background: #151515; padding: 15px; border-radius: 8px; border-left: 3px solid var(--accent); margin-top: 20px; display: none; }
+        #legend-title { font-family: 'Roboto Slab'; font-size: 1rem; color: #fff; margin: 0 0 5px 0; }
+        #legend-desc { font-size: 0.8rem; color: #aaa; line-height: 1.4; margin-bottom: 10px; }
+        .gradient-bar { height: 8px; width: 100%; border-radius: 4px; margin: 8px 0; background: #333; }
+        .legend-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: #777; }
+
+        /* MAP */
+        #map { flex: 1; background: #222; }
+        
+        /* LEAFLET CUSTOMIZATIONS */
+        .leaflet-tooltip { 
+            background: rgba(0,0,0,0.8); border: 1px solid var(--accent); color: #fff; 
+            font-family: 'Inter'; font-size: 11px; border-radius: 4px; padding: 4px 8px;
+        }
+        .leaflet-tooltip-left:before { border-left-color: rgba(0,0,0,0.8); }
+        .leaflet-tooltip-right:before { border-right-color: rgba(0,0,0,0.8); }
+        
+        /* Special class for the focused block label */
+        .focus-label {
+            background: var(--accent) !important; color: #000 !important; font-weight: 700 !important;
+            font-size: 12px !important; box-shadow: 0 2px 10px rgba(0,188,212,0.5);
+        }
     </style>
 </head>
 <body>
 
 <header>
     <div class="brand">
-        <i class="fas fa-globe-asia" style="color:#d32f2f"></i>
-        <h1>Gaya Risk Atlas</h1> <span>v6.0</span>
+        <i class="fas fa-layer-group fa-lg" style="color:var(--accent)"></i>
+        <div><h1>Gaya Risk Atlas</h1></div>
+        <span class="tag">v7.0</span>
     </div>
     <div class="logos">
-        <!-- Update these URLs to your local images if needed -->
-        <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Seal_of_Bihar.png" title="Govt of Bihar">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/United_Nations_Development_Programme_logo.svg/1200px-United_Nations_Development_Programme_logo.svg.png" title="UNDP">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Seal_of_Bihar.png" alt="Bihar">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/United_Nations_Development_Programme_logo.svg/1200px-United_Nations_Development_Programme_logo.svg.png" alt="UNDP">
     </div>
 </header>
 
 <div class="container">
     <aside class="sidebar">
-        <div class="sidebar-content">
+        <div class="sidebar-pad">
             
-            <!-- 1. BLOCK SELECTOR (New Feature) -->
-            <div class="selector-box">
-                <label><i class="fas fa-search"></i> Block Wise Profile</label>
-                <select id="blockDropdown" onchange="selectBlock(this.value)">
-                    <option value="">-- Select a Block --</option>
-                    <option disabled>Loading data...</option>
-                </select>
-                
-                <div id="block-profile">
-                    <h4 style="margin:10px 0 5px 0; color:white;" id="profile-title">Block Name</h4>
-                    <table class="profile-table" id="profile-table-body">
-                        <!-- Javascript will populate this -->
-                    </table>
+            <!-- SECTION 1: DISTRICT LEVEL -->
+            <div class="mode-section">
+                <div class="section-header"><i class="fas fa-map"></i> 1. District Level Analysis</div>
+                <div class="grid-buttons">
+                    <button class="layer-btn" onclick="setMode('multi', null)"><i class="fas fa-biohazard"></i> Multi-Hazard</button>
+                    <button class="layer-btn" onclick="setMode('flood', null)"><i class="fas fa-water"></i> Flood</button>
+                    <button class="layer-btn" onclick="setMode('drought', null)"><i class="fas fa-sun"></i> Drought</button>
+                    <button class="layer-btn" onclick="setMode('heat', null)"><i class="fas fa-temperature-high"></i> Heatwave</button>
+                    <button class="layer-btn" onclick="setMode('lightning', null)"><i class="fas fa-bolt"></i> Lightning</button>
+                    <button class="layer-btn" onclick="setMode('quake', null)"><i class="fas fa-house-crack"></i> Earthquake</button>
+                    <button class="layer-btn" onclick="setMode('fire', null)"><i class="fas fa-fire"></i> Fire</button>
+                    <button class="layer-btn" onclick="resetMap()"><i class="fas fa-times"></i> Clear Map</button>
                 </div>
             </div>
 
-            <!-- 2. LAYER CONTROLS -->
-            <div class="section-title">Risk Maps</div>
-            <button class="layer-btn" onclick="activateLayer('multi')"><i class="fas fa-layer-group"></i> Multi-Hazard Prioritization</button>
-            <button class="layer-btn" onclick="activateLayer('flood')"><i class="fas fa-water"></i> Flood Risk</button>
-            <button class="layer-btn" onclick="activateLayer('drought')"><i class="fas fa-sun"></i> Drought Risk</button>
-            <button class="layer-btn" onclick="activateLayer('heat')"><i class="fas fa-temperature-high"></i> Heatwave Risk</button>
-            <button class="layer-btn" onclick="activateLayer('lightning')"><i class="fas fa-bolt"></i> Lightning Risk</button>
-            <button class="layer-btn" onclick="activateLayer('quake')"><i class="fas fa-house-crack"></i> Earthquake Risk</button>
-            <button class="layer-btn" onclick="activateLayer('fire')"><i class="fas fa-fire"></i> Fire Risk</button>
+            <!-- SECTION 2: BLOCK FOCUS -->
+            <div class="mode-section" style="border-bottom:none;">
+                <div class="section-header"><i class="fas fa-crosshairs"></i> 2. Block Focus Mode</div>
+                <div style="margin-bottom:15px; color:#999; font-size:0.8rem;">
+                    Select a block to isolate its risk profile. The map will dim the surrounding areas.
+                </div>
+                <div class="block-select-wrapper">
+                    <select id="blockDropdown" onchange="focusBlock(this.value)">
+                        <option value="">-- Select Block to Focus --</option>
+                        <option disabled>Loading blocks...</option>
+                    </select>
+                    <div class="select-arrow"><i class="fas fa-chevron-down"></i></div>
+                </div>
+            </div>
 
-            <!-- 3. DYNAMIC INFO -->
-            <div id="layer-details" style="display:none; margin-top: 20px;">
-                <div class="info-panel">
-                    <h3 id="info-title">Title</h3>
-                    <p id="info-desc">Description</p>
-                    
-                    <label style="font-size:0.75rem; color:#888;">Legend</label>
-                    <div class="legend-bar" id="legend-gradient"></div>
-                    <div class="legend-labels">
-                        <span>Low</span><span>Moderate</span><span>High</span><span>Very High</span>
-                    </div>
-
-                    <label style="font-size:0.75rem; color:#888; margin-top:15px; display:block;">Highest Risk Blocks</label>
-                    <div class="risk-list-box" id="risk-list">
-                        <!-- JS Populated -->
-                    </div>
+            <!-- DYNAMIC LEGEND & INFO -->
+            <div id="active-legend">
+                <h3 id="legend-title">Hazard Title</h3>
+                <p id="legend-desc">Description of the hazard goes here.</p>
+                <div class="gradient-bar" id="legend-bar"></div>
+                <div class="legend-labels">
+                    <span>Low</span><span>Moderate</span><span>High</span><span>Severe</span>
+                </div>
+                <div id="block-val-display" style="margin-top:15px; font-size:0.9rem; border-top:1px solid #333; padding-top:10px; display:none;">
+                    Selected Block Value: <b style="color:var(--accent)" id="val-placeholder">--</b>
                 </div>
             </div>
 
@@ -136,301 +146,268 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // --- 1. SETUP MAP ---
-    var map = L.map('map', { zoomControl: false, center: [24.7914, 85.0002], zoom: 10 });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+    // --- 1. MAP INITIALIZATION ---
+    // Note: 'satellite' layer is active by default to ensure background image doesn't vanish
+    var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles © Esri',
+        opacity: 1.0
+    });
+    var streets = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© CartoDB'
+    });
+
+    var map = L.map('map', {
+        center: [24.7914, 85.0002],
+        zoom: 10,
+        layers: [satellite], // Default to satellite
+        zoomControl: false
+    });
+
     L.control.zoom({ position: 'bottomright' }).addTo(map);
+    L.control.layers({ "Satellite": satellite, "Dark Canvas": streets }, null, { position: 'bottomright' }).addTo(map);
 
-    var labelPane = map.createPane('labels');
-    labelPane.style.zIndex = 650;
-    labelPane.style.pointerEvents = 'none';
-
-    // Global Stores
-    var globalData = {}; // Stores raw JSONs
-    var currentGeoJsonLayer = null;
-    var blockList = []; // List of block names
-
-    // --- 2. CONFIGURATION ---
-    var config = {
-        'multi': { 
-            file: 'data/multihazard.json', 
-            title: "Multi-Hazard Prioritization", 
-            desc: "A composite risk score combining flood, drought, heat, and seismic vulnerability. Uses weighted overlay methodology to identify blocks requiring urgent intervention.",
-            colors: ['#388e3c', '#fbc02d', '#d32f2f', '#4a148c'], // Green -> Purple
-            type: 'num'
-        },
-        'flood': { 
-            file: 'data/flood.json', 
-            title: "Flood Risk", 
-            desc: "Based on geomorphic flood susceptibility and historical inundation frequency. High risk areas are concentrated near river banks.",
-            colors: ['#e3f2fd', '#2196f3', '#0d47a1'],
-            type: 'cat' 
-        },
-        'drought': { 
-            file: 'data/drought.json', 
-            title: "Drought Risk", 
-            desc: "Agricultural drought analysis using vegetation health indices (VCI) and rainfall deviation. Southern blocks show higher susceptibility.",
-            colors: ['#fff9c4', '#fbc02d', '#e65100'],
-            type: 'cat'
-        },
-        'heat': { 
-            file: 'data/heatwave.json', 
-            title: "Heatwave Risk", 
-            desc: "Land Surface Temperature (LST) analysis from peak summer months. Urban centers and barren rocky areas show extreme risk.",
-            colors: ['#fff3e0', '#ff7043', '#bf360c'],
-            type: 'num'
-        },
-        'lightning': { 
-            file: 'data/lightning.json', 
-            title: "Lightning Risk", 
-            desc: "Density of lightning strikes and associated fatalities (2020-2024).",
-            colors: ['#e8f5e9', '#66bb6a', '#1b5e20'],
-            type: 'num'
-        },
-        'quake': { 
-            file: 'data/earthquake.json', 
-            title: "Earthquake Risk", 
-            desc: "Seismic Zone Map overlaid with soil liquefaction potential.",
-            colors: ['#efebe9', '#8d6e63', '#3e2723'],
-            type: 'num'
-        },
-        'fire': { 
-            file: 'data/fire.json', 
-            title: "Fire Risk", 
-            desc: "Forest fire susceptibility based on fuel load and historical fire points.",
-            colors: ['#ffebee', '#e57373', '#b71c1c'],
-            type: 'num'
-        }
+    // --- 2. GLOBAL STATE ---
+    var appState = {
+        activeLayerKey: null,
+        activeBlock: null,
+        dataStore: {},
+        geoLayer: null
     };
 
-    // --- 3. DATA LOADER & PROCESSOR ---
+    var config = {
+        'multi': { file: 'data/multihazard.json', title: "Multi-Hazard Priority", desc: "Combined composite risk score. Darker areas indicate overlapping high risks.", colors: ['#4caf50', '#ffeb3b', '#ff9800', '#f44336', '#4a148c'] },
+        'flood': { file: 'data/flood.json', title: "Flood Risk", desc: "Susceptibility based on geomorphology and historic inundation.", colors: ['#e1f5fe', '#29b6f6', '#0277bd', '#01579b'] },
+        'drought': { file: 'data/drought.json', title: "Drought Risk", desc: "Agricultural vulnerability based on VCI and rainfall deviation.", colors: ['#fffde7', '#fff176', '#ffb74d', '#e65100'] },
+        'heat': { file: 'data/heatwave.json', title: "Heatwave Risk", desc: "Land Surface Temperature analysis.", colors: ['#fff3e0', '#ff8a65', '#d84315', '#bf360c'] },
+        'lightning': { file: 'data/lightning.json', title: "Lightning Risk", desc: "Strike density and fatality reports.", colors: ['#f1f8e9', '#aed581', '#558b2f', '#33691e'] },
+        'quake': { file: 'data/earthquake.json', title: "Earthquake Risk", desc: "Seismic zone vulnerability.", colors: ['#efebe9', '#a1887f', '#5d4037', '#3e2723'] },
+        'fire': { file: 'data/fire.json', title: "Fire Risk", desc: "Forest fire susceptibility.", colors: ['#ffebee', '#e57373', '#c62828', '#b71c1c'] }
+    };
 
-    // Initial load of all data for the Dropdown & Profile to work
-    function preloadAllData() {
-        var promises = Object.keys(config).map(key => {
-            return fetch(config[key].file)
-                .then(r => { if(r.ok) return r.json(); return null; })
+    // --- 3. DATA LOADING & PRE-PROCESSING ---
+    function init() {
+        var promises = Object.keys(config).map(key => 
+            fetch(config[key].file)
+                .then(r => r.ok ? r.json() : null)
                 .then(json => {
                     if(json) {
-                        // 1. Detect Value Column
+                        // Normalize Block Names & Detect Value Column
                         var col = detectColumn(json.features[0].properties, key);
-                        // 2. Normalize Data (Add a standard 'riskVal' property to features)
                         json.features.forEach(f => {
                             f.properties._cleanVal = parseValue(f.properties[col]);
-                            f.properties._stdName = normalizeName(f.properties); // Normalize Block Name
+                            f.properties._blockName = normalizeName(f.properties);
                         });
-                        // 3. Store
-                        globalData[key] = { json: json, col: col };
+                        appState.dataStore[key] = { json: json, col: col };
                     }
                 })
-                .catch(e => console.warn("Missing: " + config[key].file));
-        });
+        );
 
         Promise.all(promises).then(() => {
-            initBlockDropdown();
-            console.log("All Data Loaded");
+            populateBlockDropdown();
+            console.log("System Ready. Data Loaded.");
         });
     }
 
-    // Helper: Find the data column (Aggressive)
+    // Helper: Find value column
     function detectColumn(props, type) {
-        var keys = Object.keys(props);
-        var lower = keys.map(k => k.toLowerCase());
-        
-        // Priority checks
-        if(type === 'multi') return keys.find(k => k.toLowerCase().includes('score') || k.toLowerCase().includes('risk')) || keys[0];
-        if(type === 'lightning') return keys.find(k => k.toLowerCase().includes('total')) || keys[0];
-        if(type === 'flood' || type === 'drought') return keys.find(k => k.toLowerCase().includes('grid')) || keys[0];
-        
-        // Fallback: Find first key that has a number value
-        for(let k of keys) {
-            if(typeof props[k] === 'number') return k;
+        var k = Object.keys(props);
+        if(type === 'multi') return k.find(x => x.toLowerCase().includes('score')) || k[0];
+        // Generic number finder
+        for(let key of k) if(typeof props[key] === 'number') return key;
+        return k.find(x => x.toLowerCase() !== 'objectid') || k[0];
+    }
+
+    // Helper: Normalize values
+    function parseValue(v) {
+        if(typeof v === 'string') {
+            v = v.toLowerCase();
+            if(v.includes('very high')) return 5;
+            if(v.includes('high')) return 4;
+            if(v.includes('mod')) return 3;
+            if(v.includes('low')) return 2;
+            return 1;
         }
-        return keys[0]; 
+        return parseFloat(v) || 0;
     }
 
-    // Helper: Clean values (Handle "Very High" or "25.5")
-    function parseValue(val) {
-        if(val === undefined || val === null) return 0;
-        if(typeof val === 'number') return val;
-        
-        // If string, try to extract number
-        var num = parseFloat(val);
-        if(!isNaN(num)) return num;
-
-        // If categorical string
-        var s = val.toLowerCase();
-        if(s.includes('very high')) return 5;
-        if(s.includes('high')) return 4;
-        if(s.includes('mod')) return 3;
-        if(s.includes('low')) return 2;
-        return 1;
-    }
-
-    // Helper: Standardize Block Name
+    // Helper: Find block name
     function normalizeName(props) {
-        var k = Object.keys(props).find(key => key.toLowerCase().includes('block')) || Object.keys(props)[0];
-        return props[k] ? props[k].trim() : "Unknown";
+        var k = Object.keys(props).find(key => key.toLowerCase().includes('block'));
+        return k ? props[k].trim() : "Unknown";
     }
 
-    // --- 4. MAP VISUALIZATION ---
+    // --- 4. CORE RENDERING LOGIC ---
 
-    function activateLayer(key) {
-        if(currentGeoJsonLayer) map.removeLayer(currentGeoJsonLayer);
+    // Triggered by Layer Buttons
+    function setMode(layerKey) {
+        appState.activeLayerKey = layerKey;
+        // If a block is already selected, keep it focused
+        renderMap();
+        updateUI();
+    }
+
+    // Triggered by Dropdown
+    function focusBlock(blockName) {
+        appState.activeBlock = blockName === "" ? null : blockName;
+        // If no layer is active, default to Multihazard
+        if(!appState.activeLayerKey) appState.activeLayerKey = 'multi';
+        renderMap();
+        updateUI();
+    }
+
+    function resetMap() {
+        appState.activeLayerKey = null;
+        appState.activeBlock = null;
+        document.getElementById('blockDropdown').value = "";
+        if(appState.geoLayer) map.removeLayer(appState.geoLayer);
+        document.getElementById('active-legend').style.display = 'none';
+        document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+        map.setView([24.7914, 85.0002], 10);
+    }
+
+    function renderMap() {
+        if(!appState.activeLayerKey) return;
         
-        var dataset = globalData[key];
-        if(!dataset) { alert("Data for " + config[key].title + " not loaded yet."); return; }
+        var dataObj = appState.dataStore[appState.activeLayerKey];
+        var cfg = config[appState.activeLayerKey];
+        if(!dataObj) { alert("Data not loaded for this layer"); return; }
 
-        // Calculate Stats for Color Scale
-        var values = dataset.json.features.map(f => f.properties._cleanVal);
-        var min = Math.min(...values);
-        var max = Math.max(...values);
-        if(min === max) { min=0; max=5; } // Fallback for categorical
+        if(appState.geoLayer) map.removeLayer(appState.geoLayer);
 
-        // Create Layer
-        currentGeoJsonLayer = L.geoJson(dataset.json, {
+        // Calculate Min/Max for color scale
+        var vals = dataObj.json.features.map(f => f.properties._cleanVal);
+        var min = Math.min(...vals);
+        var max = Math.max(...vals);
+        if(min === max) max = min + 1;
+
+        appState.geoLayer = L.geoJson(dataObj.json, {
             style: function(feature) {
+                var val = feature.properties._cleanVal;
+                var bName = feature.properties._blockName;
+                
+                // SPOTLIGHT LOGIC
+                var isTarget = (appState.activeBlock === bName);
+                var isFocusMode = (appState.activeBlock !== null);
+                
+                var opacity = 0.65; // Default transparency for Satellite visibility
+                var weight = 1;
+                var color = '#fff';
+                var dashArray = null;
+
+                if (isFocusMode) {
+                    if (isTarget) {
+                        opacity = 0.85; // Target is clearer
+                        weight = 3;     // Target has thick border
+                        color = '#00bcd4'; // Cyan highlight
+                    } else {
+                        opacity = 0.1;  // Others are ghosted
+                        weight = 0.5;
+                        color = '#555';
+                    }
+                }
+
                 return {
-                    fillColor: getColor(feature.properties._cleanVal, min, max, config[key].colors),
-                    weight: 1,
-                    color: 'white',
-                    fillOpacity: 0.8
+                    fillColor: getColor(val, min, max, cfg.colors),
+                    weight: weight,
+                    opacity: 1,
+                    color: color,
+                    dashArray: dashArray,
+                    fillOpacity: opacity
                 };
             },
             onEachFeature: function(feature, layer) {
-                // Label
-                layer.bindTooltip(feature.properties._stdName, { permanent: true, direction:"center", className:"block-label", pane:"labels" });
+                var bName = feature.properties._blockName;
+                var val = Math.round(feature.properties._cleanVal * 100)/100;
+                
+                // Tooltip Logic:
+                // If Focus Mode -> Only show tooltip for target (Permanent)
+                // If District Mode -> Show tooltip on hover
+                if (appState.activeBlock === bName) {
+                    layer.bindTooltip(bName, { permanent: true, direction: "center", className: "focus-label" });
+                    layer.openTooltip();
+                } else {
+                    layer.bindTooltip(`<b>${bName}</b><br>Val: ${val}`, { sticky: true, direction: "top" });
+                }
+
                 // Interaction
                 layer.on('click', function() {
-                    document.getElementById('blockDropdown').value = feature.properties._stdName;
-                    selectBlock(feature.properties._stdName);
+                    appState.activeBlock = bName;
+                    document.getElementById('blockDropdown').value = bName;
+                    renderMap();
+                    updateUI();
                 });
             }
         }).addTo(map);
 
-        map.fitBounds(currentGeoJsonLayer.getBounds());
-        updateSidebar(key, dataset.json.features);
+        // Zoom Logic
+        if(appState.activeBlock) {
+            // Find layer for block
+            var targetLayer = appState.geoLayer.getLayers().find(l => l.feature.properties._blockName === appState.activeBlock);
+            if(targetLayer) map.fitBounds(targetLayer.getBounds(), { padding: [50, 50], maxZoom: 11 });
+        } else {
+            // map.fitBounds(appState.geoLayer.getBounds()); // Optional: Auto zoom to district
+        }
     }
 
     function getColor(val, min, max, palette) {
-        // Simple Gradient Interpolation
-        var pct = (val - min) / (max - min);
-        if(pct < 0) pct = 0; if(pct > 1) pct = 1;
-
-        if (palette.length === 3) {
-            if(pct < 0.5) return palette[0];
-            if(pct < 0.8) return palette[1];
-            return palette[2];
-        } else {
-            // 4 color scale
-            if(pct < 0.25) return palette[0];
-            if(pct < 0.50) return palette[1];
-            if(pct < 0.75) return palette[2];
-            return palette[3];
-        }
+        var t = (val - min) / (max - min);
+        t = Math.max(0, Math.min(1, t));
+        // Map t (0-1) to palette index
+        var idx = Math.floor(t * (palette.length - 1));
+        return palette[idx];
     }
 
     // --- 5. UI UPDATES ---
+    function updateUI() {
+        var cfg = config[appState.activeLayerKey];
+        if(!cfg) return;
 
-    function updateSidebar(key, features) {
-        // Highlight Button
+        // Active Buttons
         document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
-        // Find button by text content roughly (or modify HTML to have IDs)
-        // Simplified:
-        var cfg = config[key];
-        
-        document.getElementById('layer-details').style.display = 'block';
-        document.getElementById('info-title').innerText = cfg.title;
-        document.getElementById('info-desc').innerText = cfg.desc;
-        
-        // Legend Gradient
-        var grad = `linear-gradient(90deg, ${cfg.colors.join(', ')})`;
-        document.getElementById('legend-gradient').style.background = grad;
+        // (Simple check based on onclick attribute string match)
+        document.querySelectorAll(`.layer-btn[onclick*="'${appState.activeLayerKey}'"]`).forEach(b => b.classList.add('active'));
 
-        // Generate High Risk List
-        var listHTML = "";
-        // Sort features by value descending
-        var sorted = [...features].sort((a,b) => b.properties._cleanVal - a.properties._cleanVal);
+        // Legend
+        var leg = document.getElementById('active-legend');
+        leg.style.display = 'block';
+        document.getElementById('legend-title').innerText = cfg.title;
+        document.getElementById('legend-desc').innerText = cfg.desc;
+        document.getElementById('legend-bar').style.background = `linear-gradient(90deg, ${cfg.colors.join(', ')})`;
+
+        // Value Display
+        var valDisplay = document.getElementById('block-val-display');
+        var valPlace = document.getElementById('val-placeholder');
         
-        // Take top 5
-        for(var i=0; i<8; i++) {
-            if(sorted[i]) {
-                var val = Math.round(sorted[i].properties._cleanVal * 10) / 10;
-                listHTML += `<div class="risk-row">
-                    <span>${sorted[i].properties._stdName}</span>
-                    <span style="color:${cfg.colors[cfg.colors.length-1]}">${val}</span>
-                </div>`;
-            }
+        if(appState.activeBlock) {
+            valDisplay.style.display = 'block';
+            // Find value
+            var feat = appState.dataStore[appState.activeLayerKey].json.features.find(f => f.properties._blockName === appState.activeBlock);
+            valPlace.innerText = feat ? Math.round(feat.properties._cleanVal * 100)/100 : "N/A";
+        } else {
+            valDisplay.style.display = 'none';
         }
-        document.getElementById('risk-list').innerHTML = listHTML;
     }
 
-    // --- 6. BLOCK PROFILE LOGIC ---
+    function populateBlockDropdown() {
+        // Use 'multi' or first available dataset to get names
+        var src = appState.dataStore['multi'] || appState.dataStore[Object.keys(appState.dataStore)[0]];
+        if(!src) return;
 
-    function initBlockDropdown() {
-        // Extract all unique block names from one of the datasets (e.g. Flood)
-        if(!globalData['flood']) return;
-        
-        var names = globalData['flood'].json.features.map(f => f.properties._stdName).sort();
-        blockList = [...new Set(names)]; // Unique
+        var names = src.json.features.map(f => f.properties._blockName).sort();
+        // Unique
+        names = [...new Set(names)];
         
         var sel = document.getElementById('blockDropdown');
-        sel.innerHTML = '<option value="">-- Select a Block --</option>';
-        blockList.forEach(n => {
-            sel.innerHTML += `<option value="${n}">${n}</option>`;
+        names.forEach(n => {
+            var opt = document.createElement('option');
+            opt.value = n;
+            opt.innerText = n;
+            sel.appendChild(opt);
         });
-    }
-
-    function selectBlock(blockName) {
-        if(!blockName) return;
-        
-        var profileDiv = document.getElementById('block-profile');
-        var title = document.getElementById('profile-title');
-        var tbody = document.getElementById('profile-table-body');
-        
-        profileDiv.style.display = 'block';
-        title.innerText = blockName;
-        tbody.innerHTML = "";
-
-        // Loop through all hazards
-        Object.keys(config).forEach(key => {
-            var data = globalData[key];
-            if(data) {
-                // Find feature for this block
-                var feature = data.json.features.find(f => f.properties._stdName === blockName);
-                var val = "N/A";
-                var color = "#666";
-                var label = "No Data";
-
-                if(feature) {
-                    var raw = feature.properties._cleanVal;
-                    // Determine simplified label based on relative range
-                    // Note: Ideally we calculate percentiles, but simplified here:
-                    label = raw.toFixed(2);
-                    // Color code badge
-                    color = getBadgeColor(key, raw);
-                }
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${config[key].title.replace(' Risk','')}</td>
-                        <td><span class="risk-badge" style="background:${color}; color:#fff">${label}</span></td>
-                    </tr>
-                `;
-            }
-        });
-    }
-
-    function getBadgeColor(key, val) {
-        // Approximate thresholds based on typical data
-        // You might need to tune these based on your actual data ranges
-        if(val > 4 || val > 100) return '#d32f2f'; // Red
-        if(val > 2 || val > 50) return '#fbc02d';  // Yellow
-        return '#388e3c'; // Green
     }
 
     // Start
-    preloadAllData();
+    init();
 
 </script>
 </body>
