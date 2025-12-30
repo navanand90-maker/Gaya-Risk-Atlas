@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gaya District Risk Atlas v5.1</title>
+    <title>Gaya District Risk Atlas v5.2</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -43,13 +43,20 @@
         .layer-btn.active i { color: #1a1a1a; }
 
         #map { flex: 1; background-color: #e5e5e5; }
-        /* Label Styling */
-        .leaflet-tooltip.block-label { 
-            background: transparent !important; border: none !important; box-shadow: none !important; 
-            font-size: 10px; font-weight: 700; color: #222; text-transform: uppercase; 
-            text-shadow: -1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff, -1.5px 1.5px 0 #fff, 1.5px 1.5px 0 #fff; 
-            font-family: 'Poppins', sans-serif; pointer-events: none;
-        }
+        .leaflet-tooltip.block-label { background: transparent !important; border: none !important; box-shadow: none !important; font-size: 10px; font-weight: 700; color: #222; text-transform: uppercase; text-shadow: -1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff, -1.5px 1.5px 0 #fff, 1.5px 1.5px 0 #fff; font-family: 'Poppins', sans-serif; pointer-events: none; }
+    
+        /* --- NEW: Risk Analysis List Styling --- */
+        #risk-analysis-wrapper { background: #25252f; padding: 15px; border-radius: 8px; margin-top: 20px; }
+        #risk-analysis-list { max-height: 300px; overflow-y: auto; padding-right: 10px; }
+        .risk-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 5px; border-bottom: 1px solid #333; font-size: 0.85rem; }
+        .risk-item:last-child { border-bottom: none; }
+        .risk-grade { font-weight: 600; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; text-align: center; }
+        /* Matched to legend colors */
+        .grade-very-high { color: #fff; background-color: #4a148c; }
+        .grade-high { color: #fff; background-color: #d32f2f; }
+        .grade-moderate { color: #111; background-color: #f57f17; }
+        .grade-low { color: #fff; background-color: #388e3c; }
+        .grade-no-data { color: #111; background-color: #ccc; }
     </style>
 </head>
 <body>
@@ -58,12 +65,10 @@
         <div class="brand">
             <i class="fas fa-layer-group fa-lg" style="color: #1a1a1a;"></i>
             <div><h1>Risk Atlas</h1></div>
-            <span>v5.1</span>
+            <span>v5.2</span>
         </div>
         <div class="logos">
-            <!-- Replace these with actual paths if local, or keep URLs -->
             <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Seal_of_Bihar.png" class="logo-img" title="Government of Bihar">
-            <img src="bsdma_logo.jpg" class="logo-img" onerror="this.style.display='none'" title="BSDMA">
             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/United_Nations_Development_Programme_logo.svg/1200px-United_Nations_Development_Programme_logo.svg.png" class="logo-img" title="UNDP">
         </div>
     </header>
@@ -81,8 +86,9 @@
                     <div id="dynamic-legend" class="legend-grid"></div>
                 </div>
 
-                <div class="section-title">Natural Hazards</div>
+                <div class="section-title">Hazard Risk Layers</div>
                 <div class="nav-grid">
+                    <button class="layer-btn" onclick="toggleLayer('multihazard')"><i class="fas fa-star"></i> Multihazard Risk</button>
                     <button class="layer-btn" onclick="toggleLayer('flood')"><i class="fas fa-water"></i> Flood Risk</button>
                     <button class="layer-btn" onclick="toggleLayer('drought')"><i class="fas fa-sun"></i> Drought Risk</button>
                     <button class="layer-btn" onclick="toggleLayer('heat')"><i class="fas fa-temperature-high"></i> Heatwave Risk</button>
@@ -91,10 +97,10 @@
                     <button class="layer-btn" onclick="toggleLayer('fire')"><i class="fas fa-fire"></i> Fire Risk</button>
                 </div>
 
-                <div class="section-title" style="margin-top: 25px;">Vulnerability</div>
-                <div class="nav-grid">
-                    <button class="layer-btn" onclick="toggleLayer('pop')"><i class="fas fa-users"></i> Population Density</button>
-                    <button class="layer-btn" onclick="toggleLayer('land')"><i class="fas fa-tree"></i> Landuse Map</button>
+                <!-- NEW: Dynamic Risk Analysis Section -->
+                <div id="risk-analysis-wrapper" style="display: none;">
+                    <div class="section-title">Block-Level Risk Analysis</div>
+                    <div id="risk-analysis-list"></div>
                 </div>
             </div>
         </aside>
@@ -103,283 +109,182 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // --- BASE MAP CONFIG ---
         var lightMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap, © CartoDB' });
-        var satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri' });
-
-        var map = L.map('map', { 
-            zoomControl: false, 
-            layers: [lightMap],
-            center: [24.7914, 85.0002], 
-            zoom: 10 
-        });
-
+        var map = L.map('map', { zoomControl: false, layers: [lightMap] }).setView([24.7914, 85.0002], 10);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
-        L.control.layers({ "Clean Map": lightMap, "Satellite": satelliteMap }, null, { position: 'topright' }).addTo(map);
 
-        // --- MASTER LABEL PANE (Keeps labels on top of colored polygons) ---
         map.createPane('labels');
         map.getPane('labels').style.zIndex = 650;
         map.getPane('labels').style.pointerEvents = 'none';
 
         var masterLabelLayer = L.geoJson(null, {
-            style: { color: '#333', weight: 0.5, fillOpacity: 0 }, 
+            style: { color: 'transparent', fillOpacity: 0 }, 
             onEachFeature: function(feature, layer) {
-                var props = feature.properties;
-                // Try multiple variations for Name column
-                var nameKey = Object.keys(props).find(k => k.toLowerCase().includes('block')) || Object.keys(props)[0];
-                var bName = props[nameKey] || "Block";
-                
-                layer.bindTooltip(bName, { permanent: true, direction: "center", className: "block-label", pane: "labels" });
+                var nameKey = Object.keys(feature.properties).find(k => k.toLowerCase().includes('block')) || "Block";
+                layer.bindTooltip(feature.properties[nameKey], { permanent: true, direction: "center", className: "block-label", pane: "labels" });
             }
         });
+        fetch('data/population.json').then(r => r.json()).then(d => { masterLabelLayer.addData(d); });
         
-        // Load boundary data for labels (Using population file as it usually has boundaries)
-        fetch('data/population.json')
-            .then(r => r.json())
-            .then(d => { masterLabelLayer.addData(d); })
-            .catch(e => console.log("Note: Boundaries not loaded yet (Check data/population.json)"));
-
-        // --- COLOR SCHEMES & LEGEND DATA ---
         var legendStandard = [
-            {col:'#4a148c', lbl:'Very High'}, 
-            {col:'#d32f2f', lbl:'High'}, 
-            {col:'#f57f17', lbl:'Moderate'}, 
-            {col:'#388e3c', lbl:'Low'}
+            {col:'#4a148c', lbl:'Very High'}, {col:'#d32f2f', lbl:'High'}, 
+            {col:'#f57f17', lbl:'Moderate'}, {col:'#388e3c', lbl:'Low'}
         ];
         
         var layerInfo = {
-            'flood': { title: "Flood Risk", desc: "Monsoon flooding analysis based on grid code methodology.", legend: legendStandard },
-            'drought': { title: "Drought Risk", desc: "Agricultural drought vulnerability.", legend: legendStandard },
-            'heat': { title: "Heatwave Risk", desc: "Land Surface Temperature (LST) derived zones.", legend: legendStandard },
-            'lightning': { title: "Lightning Risk", desc: "Fatality counts (2022-2025).", legend: [{col:'#4a148c', lbl:'> 9 (Very High)'}, {col:'#d32f2f', lbl:'6 - 9 (High)'}, {col:'#f57f17', lbl:'3 - 6 (Moderate)'}, {col:'#388e3c', lbl:'< 3 (Low)'}] },
-            'quake': { title: "Earthquake Risk", desc: "Seismic vulnerability index.", legend: legendStandard },
-            'fire': { title: "Fire Risk", desc: "Fire susceptibility index.", legend: legendStandard },
-            'pop': { title: "Population Density", desc: "Total population distribution.", legend: [{col:'#08306b', lbl:'Very High'}, {col:'#4292c6', lbl:'High'}, {col:'#deebf7', lbl:'Low'}] },
-            'land': { title: "Landuse", desc: "Land cover classification.", legend: [{col:'#b71c1c', lbl:'Builtup'}, {col:'#fbc02d', lbl:'Agriculture'}, {col:'#1b5e20', lbl:'Forest'}, {col:'#2196f3', lbl:'Water'}] }
+            'multihazard': { title: "Multihazard Prioritization", desc: "A composite index combining all hazards to identify blocks with the highest overall risk, requiring priority attention for mitigation and preparedness planning.", legend: legendStandard },
+            'flood': { title: "Flood Risk", desc: "Identifies areas susceptible to inundation based on hydrological models, historical flood data, and proximity to rivers. Risk is categorized by the potential severity of flooding.", legend: legendStandard },
+            'drought': { title: "Drought Risk", desc: "Assesses agricultural drought vulnerability using rainfall deficit, soil moisture, and crop health data. Highlights areas prone to prolonged dry spells impacting livelihoods.", legend: legendStandard },
+            'heat': { title: "Heatwave Risk", desc: "Measures extreme heat exposure based on Land Surface Temperature (LST) and population density. This is critical for public health advisories in urban and rural areas.", legend: legendStandard },
+            'lightning': { title: "Lightning Risk", desc: "Ranks blocks based on recorded lightning strikes and fatality data from 2022-2025, indicating areas with high thunderstorm activity and exposure.", legend: [{col:'#4a148c', lbl:'> 9 (V.High)'}, {col:'#d32f2f', lbl:'6-9 (High)'}, {col:'#f57f17', lbl:'3-6 (Mod)'}, {col:'#388e3c', lbl:'< 3 (Low)'}] },
+            'quake': { title: "Earthquake Risk", desc: "Evaluates seismic risk based on proximity to fault lines, soil composition, and structural vulnerability. The district falls within a moderate seismic zone.", legend: legendStandard },
+            'fire': { title: "Fire Risk", desc: "A susceptibility index based on land use (e.g., dry forests, dense settlements), accessibility for fire services, and historical fire incidents.", legend: legendStandard }
         };
 
-        // --- 1. SMART COLUMN DETECTOR (Fixes the undefined data issue) ---
         function detectColumn(props, type) {
             var keys = Object.keys(props);
             var lowerKeys = keys.map(k => k.toLowerCase());
-
             function find(terms) {
                 for (let term of terms) {
                     let idx = lowerKeys.indexOf(term.toLowerCase());
-                    if (idx > -1) return keys[idx]; // Return the actual case-sensitive key
+                    if (idx > -1) return keys[idx];
                 }
                 return null;
             }
-
-            if (type === 'lightning') return find(['Total', 'Deaths', 'Fatalities']) || 'Total';
-            if (type === 'flood' || type === 'drought') return find(['gridcode', 'grid_code', 'grid', 'class', 'risk_class']) || 'gridcode';
-            if (type === 'pop') return find(['pop', 'population', 'p_total', 'total_pop']) || 'Pop';
-            if (type === 'land') return find(['landuse', 'lulc', 'class', 'type']) || 'gridcode';
-            
-            // Fallback for generic numerical layers (Heat, Fire, Quake)
-            return find(['mean', '_mean', 'sum', '_sum', 'total', 'risk_score', 'value', 'gridcode']) || keys[0];
+            if (type === 'lightning') return find(['Total', 'Deaths', 'Fatalities']);
+            if (type === 'cat') return find(['gridcode', 'grid_code', 'class', 'risk_class', 'Multi_Risk']);
+            return find(['mean', '_mean', 'sum', 'total', 'risk_score', 'value', 'gridcode']) || keys.find(k => typeof props[k] === 'number') || keys[0];
         }
 
-        // --- 2. STATS CALCULATOR (Fixes range issues) ---
         function calculateStats(data, colName) {
-            var vals = [];
-            data.features.forEach(f => {
-                var val = f.properties[colName];
-                if (val !== null && val !== undefined && val !== "") {
-                    var num = parseFloat(val);
-                    if (!isNaN(num)) vals.push(num);
-                }
-            });
-
+            var vals = data.features.map(f => parseFloat(f.properties[colName])).filter(v => !isNaN(v));
             if (vals.length === 0) return { min: 0, max: 1 };
-            
-            var min = Math.min(...vals);
-            var max = Math.max(...vals);
-            
-            // Avoid zero division
-            if (min === max) { min = min - 1; max = max + 1; }
-            
-            console.log(`Stats [${colName}]: Min ${min}, Max ${max}`);
-            return { min: min, max: max };
+            var min = Math.min(...vals); var max = Math.max(...vals);
+            return { min: min, max: (min === max) ? max + 1 : max };
         }
-
-        // --- 3. COLORING LOGIC (The Paint Brush) ---
         
-        function getLightningColor(d) {
-            var num = parseFloat(d);
-            if (isNaN(num)) return '#ccc';
-            if (num > 9) return '#4a148c'; 
-            if (num >= 6) return '#d32f2f'; 
-            if (num >= 3) return '#f57f17'; 
-            return '#388e3c'; 
-        }
-
         function getCatColor(d) {
-            // Handles GridCodes (1-5) and Text (High/Low)
-            if (d === undefined || d === null) return '#ccc';
-            
             var num = parseFloat(d);
             if (!isNaN(num)) {
-                if (num >= 5) return '#4a148c'; 
-                if (num >= 4) return '#d32f2f'; 
-                if (num >= 3) return '#f57f17'; 
-                if (num <= 2) return '#388e3c'; 
+                if (num >= 5) return '#4a148c'; if (num >= 4) return '#d32f2f';
+                if (num >= 3) return '#f57f17'; if (num <= 2) return '#388e3c';
             }
-            
             var str = String(d).toLowerCase();
-            if (str.includes('very') || str.includes('severe')) return '#4a148c';
-            if (str.includes('high')) return '#d32f2f';
-            if (str.includes('mod') || str.includes('med')) return '#f57f17';
-            if (str.includes('low')) return '#388e3c';
+            if (str.includes('very')) return '#4a148c'; if (str.includes('high')) return '#d32f2f';
+            if (str.includes('mod')) return '#f57f17'; if (str.includes('low')) return '#388e3c';
             return '#ccc';
         }
-
+        function getLightningColor(d) {
+            var num = parseFloat(d);
+            return isNaN(num) ? '#ccc' : num > 9 ? '#4a148c' : num >= 6 ? '#d32f2f' : num >= 3 ? '#f57f17' : '#388e3c';
+        }
         function getDynamicColor(d, min, max) {
             var num = parseFloat(d);
             if (isNaN(num)) return '#ccc';
-            
-            var pct = (num - min) / (max - min); 
-            if (pct > 0.80) return '#4a148c'; 
-            if (pct > 0.60) return '#d32f2f';
-            if (pct > 0.40) return '#f57f17';
-            if (pct > 0.20) return '#fdd835';
-            return '#388e3c'; 
+            var pct = (num - min) / (max - min);
+            return pct > 0.8 ? '#4a148c' : pct > 0.6 ? '#d32f2f' : pct > 0.4 ? '#f57f17' : '#388e3c';
         }
 
-        function getPopColor(d) {
-             var num = parseFloat(d);
-             if (isNaN(num)) return '#ccc';
-             return num > 250000 ? '#08306b' : num > 150000 ? '#08519c' : num > 100000 ? '#2171b5' : num > 50000 ? '#6baed6' : '#deebf7';
-        }
-        
-        function getLandColor(d) {
-            if (!d) return '#ccc';
-            var val = String(d).toLowerCase();
-            if (val.includes('built') || val.includes('urban')) return '#b71c1c';
-            if (val.includes('agri') || val.includes('crop')) return '#fbc02d';
-            if (val.includes('forest') || val.includes('veg')) return '#1b5e20';
-            if (val.includes('water')) return '#2196f3';
-            return '#eee';
-        }
-
-        // --- LAYER MANAGER ---
-        var layers = {};
-        var currentLayer = null;
+        var layers = {}; var currentLayer = null;
 
         function createLayer(url, logicType) {
             var lyr = L.geoJson(null, {});
-            
-            fetch(url).then(r => {
-                if (!r.ok) throw new Error("HTTP " + r.status);
-                return r.json();
-            })
-            .then(data => {
+            fetch(url).then(r => r.json()).then(data => {
                 if (!data.features || data.features.length === 0) return;
 
-                // 1. Detect which column to use
                 var colName = detectColumn(data.features[0].properties, logicType);
-                console.log(`Loaded ${url} -> Column: ${colName}`);
+                var stats = (logicType === 'num') ? calculateStats(data, colName) : {};
+                
+                // Store analysis info on the layer for later retrieval
+                lyr.options.analysisInfo = { data: data.features, colName, logicType, stats };
 
-                // 2. Calculate Stats if numerical
-                var stats = { min: 0, max: 1 };
-                if (logicType === 'num' || logicType === 'pop') {
-                    stats = calculateStats(data, colName);
-                }
-
-                // 3. Apply Style
                 lyr.options.style = function(feature) {
                     var val = feature.properties[colName];
-                    var col = '#ccc'; // Default grey
-                    try {
-                        if (logicType === 'lightning') col = getLightningColor(val);
-                        else if (logicType === 'cat') col = getCatColor(val);
-                        else if (logicType === 'land') col = getLandColor(val);
-                        else if (logicType === 'pop') col = getPopColor(val);
-                        else if (logicType === 'num') col = getDynamicColor(val, stats.min, stats.max);
-                    } catch(e) { console.warn("Style error", e); }
-
-                    return { fillColor: col, weight: 1, opacity: 1, color: 'white', fillOpacity: 0.8 };
+                    var col = '#ccc';
+                    if (logicType === 'lightning') col = getLightningColor(val);
+                    else if (logicType === 'cat') col = getCatColor(val);
+                    else if (logicType === 'num') col = getDynamicColor(val, stats.min, stats.max);
+                    return { fillColor: col, weight: 1, color: 'white', fillOpacity: 0.8 };
                 };
-
-                // 4. Bind Popups
-                lyr.eachLayer(function(layer) {
-                    var props = layer.feature.properties;
-                    var nameKey = Object.keys(props).find(k => k.toLowerCase().includes('block')) || "Block";
-                    var val = props[colName];
-                    if(typeof val === 'number') val = Math.round(val * 100) / 100;
-
-                    layer.bindPopup(`
-                        <div style="font-family:'Poppins'">
-                            <h4 style="margin:0 0 5px 0">${props[nameKey]}</h4>
-                            <span>Data: <b>${colName}</b></span><br>
-                            <span>Value: <b>${val}</b></span>
-                        </div>
-                    `);
-                });
-
                 lyr.addData(data);
-            })
-            .catch(e => console.error('Failed to load ' + url, e));
-            
+            }).catch(e => console.error('Failed to load ' + url, e));
             return lyr;
         }
 
-        // --- INITIALIZE DATASETS ---
-        // Ensure these files exist in your "data" folder
-        layers['pop'] = createLayer('data/population.json', 'pop');
-        layers['flood'] = createLayer('data/flood.json', 'cat');     
-        layers['drought'] = createLayer('data/drought.json', 'cat'); 
+        layers['multihazard'] = createLayer('data/multihazard.json', 'cat');
+        layers['flood'] = createLayer('data/flood.json', 'cat');
+        layers['drought'] = createLayer('data/drought.json', 'cat');
         layers['heat'] = createLayer('data/heatwave.json', 'num');
-        layers['lightning'] = createLayer('data/lightning.json', 'lightning'); 
+        layers['lightning'] = createLayer('data/lightning.json', 'lightning');
         layers['fire'] = createLayer('data/fire.json', 'num');
         layers['quake'] = createLayer('data/earthquake.json', 'num');
-        layers['land'] = createLayer('data/landuse.json', 'land');
 
-        // --- USER INTERACTION ---
-        function toggleLayer(id) {
-            // Remove current layer
-            if (currentLayer && map.hasLayer(currentLayer)) {
-                map.removeLayer(currentLayer);
-            }
+        function getRiskGrade(val, logicType, stats) {
+            if (val === undefined || val === null) return { text: 'No Data', class: 'no-data' };
             
-            // Add new layer
-            if (layers[id]) {
-                currentLayer = layers[id];
-                map.addLayer(currentLayer);
-                
-                // If the layer has data, zoom to it
-                if (currentLayer.getLayers().length > 0) {
-                    map.fitBounds(currentLayer.getBounds());
-                }
-            }
+            var grade = { text: 'Low', class: 'low' };
+            var num = parseFloat(val);
 
-            // Ensure Labels stay on top
+            if (logicType === 'lightning') {
+                if (num > 9) grade = {text:'Very High', class:'very-high'}; else if (num >= 6) grade = {text:'High', class:'high'};
+                else if (num >= 3) grade = {text:'Moderate', class:'moderate'};
+            } else if (logicType === 'cat') {
+                if (num >= 5) grade = {text:'Very High', class:'very-high'}; else if (num >= 4) grade = {text:'High', class:'high'};
+                else if (num >= 3) grade = {text:'Moderate', class:'moderate'};
+            } else if (logicType === 'num') {
+                var pct = (num - stats.min) / (stats.max - stats.min);
+                if (pct > 0.8) grade = {text:'Very High', class:'very-high'}; else if (pct > 0.6) grade = {text:'High', class:'high'};
+                else if (pct > 0.4) grade = {text:'Moderate', class:'moderate'};
+            }
+            return grade;
+        }
+
+        function updateRiskAnalysis(layer) {
+            var analysisDiv = document.getElementById('risk-analysis-list');
+            var wrapper = document.getElementById('risk-analysis-wrapper');
+            analysisDiv.innerHTML = '';
+
+            var info = layer.options.analysisInfo;
+            if (!info || !info.data) { wrapper.style.display = 'none'; return; }
+            
+            var items = info.data.map(feature => {
+                var props = feature.properties;
+                var nameKey = Object.keys(props).find(k => k.toLowerCase().includes('block')) || Object.keys(props)[0];
+                var blockName = props[nameKey] || 'Unnamed Area';
+                var value = props[info.colName];
+                var grade = getRiskGrade(value, info.logicType, info.stats);
+                return `<div class="risk-item"><span>${blockName}</span><span class="risk-grade grade-${grade.class}">${grade.text}</span></div>`;
+            }).join('');
+
+            analysisDiv.innerHTML = items;
+            wrapper.style.display = 'block';
+        }
+
+        function toggleLayer(id) {
+            if (currentLayer) map.removeLayer(currentLayer);
+            
+            currentLayer = layers[id];
+            map.addLayer(currentLayer);
+            if (currentLayer.getBounds().isValid()) map.fitBounds(currentLayer.getBounds());
+
             if (!map.hasLayer(masterLabelLayer)) masterLabelLayer.addTo(map);
             masterLabelLayer.bringToFront();
             
             updateUI(id);
+            updateRiskAnalysis(currentLayer);
         }
 
         function updateUI(id) {
-            // Update Sidebar Info
             var data = layerInfo[id];
-            var contentDiv = document.getElementById('dynamic-content');
-            var legendDiv = document.getElementById('dynamic-legend');
-            var wrapper = document.getElementById('legend-wrapper');
-
-            if (data) {
-                contentDiv.innerHTML = `<h2>${data.title}</h2><p>${data.desc}</p>`;
-                wrapper.style.display = 'block';
-                legendDiv.innerHTML = '';
-                data.legend.forEach(item => {
-                    legendDiv.innerHTML += `<div class="legend-item"><div class="color-dot" style="background:${item.col}"></div>${item.lbl}</div>`;
-                });
-            }
-
-            // Update Active Button State
+            document.getElementById('dynamic-content').innerHTML = `<h2>${data.title}</h2><p>${data.desc}</p>`;
+            var legBox = document.getElementById('dynamic-legend');
+            document.getElementById('legend-wrapper').style.display = 'block';
+            legBox.innerHTML = '';
+            data.legend.forEach(item => {
+                legBox.innerHTML += `<div class="legend-item"><div class="color-dot" style="background:${item.col}"></div>${item.lbl}</div>`;
+            });
             document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
-            if(event) event.currentTarget.classList.add('active');
+            event.currentTarget.classList.add('active');
         }
     </script>
 </body>
