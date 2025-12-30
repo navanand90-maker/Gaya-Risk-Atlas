@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gaya Risk Atlas v13.0 - Fixed Spotlight</title>
+    <title>Gaya Risk Atlas v14.0 - High Contrast Spotlight</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Roboto+Slab:wght@700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -58,7 +58,6 @@
         /* MAP */
         #map { flex: 1; background: #000; }
         
-        /* Reference Labels */
         .ref-label {
             background: transparent !important; border: none !important; box-shadow: none !important;
             color: rgba(255,255,255,0.7) !important; 
@@ -66,7 +65,6 @@
             font-weight: 600; font-size: 10px; pointer-events: none;
             text-transform: uppercase; letter-spacing: 0.5px;
         }
-
         .leaflet-tooltip-pane { z-index: 650; } 
     </style>
 </head>
@@ -76,7 +74,7 @@
     <div class="brand">
         <i class="fas fa-globe-asia fa-lg" style="color:var(--accent)"></i>
         <div><h1>Gaya Risk Atlas</h1></div>
-        <span class="tag">v13.0</span>
+        <span class="tag">v14.0</span>
     </div>
     <div class="logos">
         <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Seal_of_Bihar.png" alt="Bihar">
@@ -158,31 +156,23 @@
     var dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CartoDB' });
     var light = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© CartoDB' });
 
-    var map = L.map('map', { 
-        center: [24.7914, 85.0002], 
-        zoom: 10, 
-        layers: [satellite], 
-        zoomControl: false 
-    });
+    var map = L.map('map', { center: [24.7914, 85.0002], zoom: 10, layers: [satellite], zoomControl: false });
 
-    var baseMaps = { "Satellite": satellite, "Dark Canvas": dark, "Light Canvas": light };
-    L.control.layers(baseMaps).addTo(map);
+    L.control.layers({ "Satellite": satellite, "Dark Canvas": dark, "Light Canvas": light }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // --- 3. REFERENCE LAYER (White Boundaries) ---
+    // --- 3. REFERENCE LAYER ---
     map.createPane('refPane');
     map.getPane('refPane').style.zIndex = 620; 
     map.getPane('refPane').style.pointerEvents = 'none';
 
     var refLayer = L.geoJson(null, {
-        style: { color: 'rgba(255,255,255,0.6)', weight: 1.5, fillOpacity: 0, dashArray: '4, 4' },
+        style: { color: 'rgba(255,255,255,0.5)', weight: 1.5, fillOpacity: 0, dashArray: '4, 4' },
         pane: 'refPane',
         interactive: false,
         onEachFeature: function(feature, layer) {
             var name = normalizeName(feature.properties);
-            if(name !== "Unknown") {
-                layer.bindTooltip(name, { permanent: true, direction: "center", className: "ref-label" });
-            }
+            if(name !== "Unknown") layer.bindTooltip(name, { permanent: true, direction: "center", className: "ref-label" });
         }
     }).addTo(map);
 
@@ -190,21 +180,14 @@
     var appState = { activeKey: 'multi', activeBlock: null, data: {}, currentLayer: null };
 
     function init() {
-        // Load Reference
-        fetch('data/blocks.json')
-            .then(r => r.ok ? r.json() : null)
-            .then(json => {
-                if(json) {
-                    refLayer.addData(json);
-                    populateDropdown(json);
-                }
-            });
+        // Load Blocks
+        fetch('data/blocks.json').then(r => r.ok ? r.json() : null).then(json => {
+            if(json) { refLayer.addData(json); populateDropdown(json); }
+        });
 
         // Load Hazards
         var promises = Object.keys(config).map(key => 
-            fetch(config[key].file)
-            .then(r => r.ok ? r.json() : null)
-            .then(json => {
+            fetch(config[key].file).then(r => r.ok ? r.json() : null).then(json => {
                 if(json) {
                     var col = detectColumn(json.features[0].properties, key);
                     json.features.forEach(f => {
@@ -215,29 +198,22 @@
                 }
             })
         );
-
-        Promise.all(promises).then(() => {
-            setMode('multi');
-        });
+        Promise.all(promises).then(() => setMode('multi'));
     }
 
-    // --- HELPER FUNCTIONS ---
+    // --- HELPERS ---
     function cleanString(str) {
-        // Aggressively clean string for comparison: lowercase, remove spaces, remove "block", "cd"
-        return str.toLowerCase().replace(/block/g, '').replace(/c\.d\./g, '').replace(/\s/g, '');
+        if(!str) return "";
+        // Extremely aggressive cleaning to ensure matches (e.g. "Gaya Town" == "GayaTownBlock")
+        return str.toLowerCase().replace(/[^a-z0-9]/g, '').replace('block', '').replace('cd', '');
     }
 
     function detectColumn(props, type) {
         var keys = Object.keys(props);
-        var riskKeywords = ["Very High", "High", "Moderate", "Low", "Low-Moderate"];
-        for (let k of keys) {
-            let val = props[k];
-            if (typeof val === 'string' && riskKeywords.includes(val)) return k;
-        }
-        var ignore = ['objectid', 'fid', 'shape_length', 'shape_area', 'id', 'uid'];
-        for(let k of keys) {
-            if(typeof props[k] === 'number' && !ignore.includes(k.toLowerCase())) return k;
-        }
+        var riskKeywords = ["Very High", "High", "Moderate", "Low"];
+        for (let k of keys) { if (typeof props[k] === 'string' && riskKeywords.includes(props[k])) return k; }
+        var ignore = ['objectid', 'fid', 'shape_length', 'shape_area', 'id'];
+        for(let k of keys) { if(typeof props[k] === 'number' && !ignore.includes(k.toLowerCase())) return k; }
         return keys[0];
     }
 
@@ -248,7 +224,6 @@
             if(s === 'high') return 5;
             if(s.includes('mod') && s.includes('high')) return 4; 
             if(s === 'moderate' || s === 'mod') return 3;
-            if(s.includes('low') && s.includes('mod')) return 2; 
             if(s.includes('low')) return 1;
             return 0;
         }
@@ -303,21 +278,32 @@
                 var bName = feature.properties._cleanName;
                 var baseColor = getColor(feature.properties._cleanVal, min, max, config[appState.activeKey].colors);
                 
-                // --- FIXED ISOLATION LOGIC ---
+                // --- HIGH CONTRAST LOGIC ---
                 if (appState.activeBlock) {
-                    // Use cleanString for robust comparison (fixes mismatch bug)
                     var target = cleanString(appState.activeBlock);
                     var current = cleanString(bName);
 
                     if (target === current || current.includes(target) || target.includes(current)) {
-                        // SELECTED: Full Opacity
-                        return { fillColor: baseColor, weight: 3, color: 'var(--accent)', fillOpacity: 0.9, opacity: 1 };
+                        // SELECTED: Bright, High Opacity, Cyan Border
+                        return { 
+                            fillColor: baseColor, 
+                            weight: 3, 
+                            color: '#00e5ff', 
+                            fillOpacity: 0.9, // Very Opaque
+                            opacity: 1 
+                        };
                     } else {
-                        // NOT SELECTED: 30% Opacity (Lighter, not invisible)
-                        return { fillColor: baseColor, weight: 0.5, color: '#444', fillOpacity: 0.3, opacity: 0.3 };
+                        // NOT SELECTED: Grey, Low Opacity
+                        return { 
+                            fillColor: '#222', // Force Grey to kill distraction
+                            weight: 0.5, 
+                            color: '#444', 
+                            fillOpacity: 0.1, // Ghosted
+                            opacity: 0.1 
+                        };
                     }
                 } else {
-                    // NO SELECTION: Standard District View
+                    // NO SELECTION: Normal Map
                     return { fillColor: baseColor, weight: 0, color: 'transparent', fillOpacity: 0.75 };
                 }
             },
@@ -332,13 +318,11 @@
         }).addTo(map);
 
         if(appState.activeBlock) {
-            // Find layer using fuzzy match
             var targetLayer = appState.currentLayer.getLayers().find(l => {
                 var b = cleanString(l.feature.properties._cleanName);
                 var t = cleanString(appState.activeBlock);
                 return b === t || b.includes(t) || t.includes(b);
             });
-            
             if(targetLayer) map.flyTo(targetLayer.getBounds().getCenter(), 11.5, { duration: 1.0 });
         }
     }
@@ -363,10 +347,8 @@
         if(!json) return;
         var names = json.features.map(f => normalizeName(f.properties)).sort();
         names = [...new Set(names)];
-        
         var sel = document.getElementById('blockDropdown');
         sel.innerHTML = '<option value="">-- View District Overview --</option>';
-        
         names.forEach(n => {
             if(n !== "Unknown") {
                 var opt = document.createElement('option');
