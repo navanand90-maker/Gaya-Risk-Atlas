@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gaya Risk Atlas v9.0 - Detailed Analysis</title>
+    <title>Gaya Risk Atlas v10.0</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Roboto+Slab:wght@700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -33,62 +33,46 @@
         .sidebar { width: 400px; background: var(--panel-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 1000; overflow-y: auto; box-shadow: 4px 0 20px rgba(0,0,0,0.3); }
         .sidebar-pad { padding: 24px; }
 
-        /* TYPOGRAPHY & SECTIONS */
+        /* TYPOGRAPHY */
         h2.panel-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin: 24px 0 12px 0; border-bottom: 1px solid var(--border); padding-bottom: 8px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
         h2.panel-title i { color: var(--accent); }
         h2.first { margin-top: 0; }
 
-        /* BUTTON GRID */
+        /* CONTROLS */
         .grid-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .layer-btn { background: #27272a; color: #d4d4d8; border: 1px solid #3f3f46; padding: 12px; border-radius: 6px; cursor: pointer; text-align: left; font-size: 0.85rem; transition: all 0.2s; display: flex; align-items: center; gap: 10px; font-weight: 500; }
         .layer-btn:hover { background: #3f3f46; color: white; border-color: #52525b; }
         .layer-btn.active { background: rgba(0, 229, 255, 0.1); border-color: var(--accent); color: var(--accent); font-weight: 700; box-shadow: 0 0 10px rgba(0, 229, 255, 0.1); }
         
-        /* DROPDOWNS */
         .control-group { margin-bottom: 16px; }
         label { font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 6px; font-weight: 600; }
         select { width: 100%; padding: 12px; background: #09090b; color: #fff; border: 1px solid #3f3f46; border-radius: 6px; font-family: 'Inter'; font-size: 0.9rem; cursor: pointer; transition: border 0.2s; }
         select:focus { outline: none; border-color: var(--accent); }
 
-        /* INFO PANEL (From PDF Content) */
+        /* INFO & LEGEND */
         #info-panel { background: #121212; padding: 16px; border-radius: 8px; border-left: 3px solid var(--accent); margin-top: 24px; display: none; }
         #info-title { font-family: 'Roboto Slab'; font-size: 1.1rem; color: #fff; margin: 0 0 8px 0; }
         #info-desc { font-size: 0.85rem; color: #d4d4d8; line-height: 1.6; margin-bottom: 16px; text-align: justify; }
-        
-        /* LEGEND */
         .gradient-bar { height: 12px; width: 100%; border-radius: 6px; margin: 12px 0; background: #333; position: relative; }
         .legend-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
 
         /* MAP */
         #map { flex: 1; background: #000; }
         
-        /* LEAFLET CUSTOM STYLES */
         .leaflet-tooltip { 
             background: rgba(15, 15, 16, 0.95) !important; 
             border: 1px solid var(--accent) !important; 
             color: #fff !important; 
-            font-family: 'Inter', sans-serif; 
-            font-size: 12px; 
-            font-weight: 600;
-            padding: 6px 12px;
-            box-shadow: 4px 4px 15px rgba(0,0,0,0.6);
-            border-radius: 4px;
+            font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+            padding: 6px 12px; box-shadow: 4px 4px 15px rgba(0,0,0,0.6); border-radius: 4px;
         }
         .leaflet-tooltip-left:before, .leaflet-tooltip-right:before { display: none; }
         
-        /* Permanent Label for Focused Block */
+        /* Focused Block Label */
         .focus-label {
-            background: var(--accent) !important;
-            color: #000 !important;
-            font-weight: 800 !important;
-            font-size: 14px !important;
-            border: 2px solid #fff !important;
-            z-index: 1000;
-        }
-        /* Reference Label (Clear Map) */
-        .ref-label {
-            background: transparent !important; border: none !important; box-shadow: none !important;
-            color: #fff !important; text-shadow: 2px 2px 4px #000; font-weight: 700; opacity: 0.7;
+            background: var(--accent) !important; color: #000 !important;
+            font-weight: 800 !important; font-size: 14px !important;
+            border: 2px solid #fff !important; z-index: 1000;
         }
     </style>
 </head>
@@ -98,7 +82,7 @@
     <div class="brand">
         <i class="fas fa-globe-asia fa-lg" style="color:var(--accent)"></i>
         <div><h1>Gaya Risk Atlas</h1></div>
-        <span class="tag">v9.0</span>
+        <span class="tag">v10.0</span>
     </div>
     <div class="logos">
         <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Seal_of_Bihar.png" alt="Bihar">
@@ -110,7 +94,6 @@
     <aside class="sidebar">
         <div class="sidebar-pad">
             
-            <!-- 1. HAZARD SELECTION -->
             <h2 class="panel-title first"><i class="fas fa-layer-group"></i> Risk Layers</h2>
             <div class="grid-buttons">
                 <button class="layer-btn" onclick="setMode('multi')"><i class="fas fa-exclamation-triangle"></i> Multi-Hazard</button>
@@ -123,7 +106,6 @@
                 <button class="layer-btn" onclick="showClearMap()"><i class="far fa-map"></i> Clear Map</button>
             </div>
 
-            <!-- 2. BLOCK FOCUS -->
             <h2 class="panel-title"><i class="fas fa-search-location"></i> Block Spotlight</h2>
             <div class="control-group">
                 <label>Focus on a specific Block</label>
@@ -132,26 +114,13 @@
                     <option disabled>Loading data...</option>
                 </select>
             </div>
-            <div class="control-group">
-                <label>Change Hazard for Selected Block</label>
-                <select id="hazardDropdown" onchange="setMode(this.value)">
-                    <option value="multi">Multi-Hazard Priority</option>
-                    <option value="flood">Flood Risk</option>
-                    <option value="drought">Drought Risk</option>
-                    <option value="heat">Heatwave Risk</option>
-                    <option value="lightning">Lightning Risk</option>
-                    <option value="quake">Earthquake Risk</option>
-                    <option value="fire">Fire Risk</option>
-                </select>
-            </div>
-
-            <!-- 3. DETAILED INFO -->
+            
             <div id="info-panel">
                 <h3 id="info-title">Title</h3>
                 <p id="info-desc">Description</p>
                 <div class="gradient-bar" id="legend-bar"></div>
                 <div class="legend-labels">
-                    <span>Low Risk</span><span>Moderate</span><span>High Risk</span>
+                    <span>Low</span><span>Moderate</span><span>High</span>
                 </div>
             </div>
 
@@ -162,81 +131,47 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // --- 1. CONFIGURATION (Based on PDF Content) ---
+    // --- 1. CONFIGURATION ---
     var config = {
         'multi': { 
             file: 'data/multihazard.json', 
             title: "Multi-Hazard Prioritization", 
-            // Content from PDF Summary
-            desc: "<b>Analysis:</b> Gaya District faces a complex multi-hazard landscape. While Eastern and Central Gaya (e.g., Manpur, Wazirganj) experience higher exposure to floods, heatwaves, and lightning, the Southern and Southwestern blocks (e.g., Sherghati, Dobhi) carry elevated risks for drought, fire, and seismic impacts.<br><br><b>Urban Risk:</b> Urban centers such as Gaya Town and Bodh Gaya consistently demonstrate high exposure across multiple hazards due to dense population and infrastructure concentration.", 
-            colors: ['#43a047', '#ffeb3b', '#fb8c00', '#e53935', '#4a148c'] // Green -> Yellow -> Orange -> Red -> Purple
+            desc: "<b>Integrated Risk:</b> This map classifies blocks into Low, Moderate, and High overall risk based on a weighted index of all hazards.<br><br><b>Key Insight:</b> Southern blocks (e.g., Sherghati, Dobhi) show high composite risk due to overlapping drought and fire vulnerability, while Central blocks face high population exposure.", 
+            colors: ['#43a047', '#ffeb3b', '#fb8c00', '#d32f2f', '#4a148c'] 
         },
         'flood': { 
-            file: 'data/flood.json', 
-            title: "Flood Risk Map", 
-            desc: "<b>Overview:</b> Block-wise flood susceptibility based on hydrological patterns, historical flood behavior, and vulnerable structures. High risk areas are often concentrated near river banks where population exposure is highest.", 
-            colors: ['#e1f5fe', '#4fc3f7', '#039be5', '#01579b'] // Light Blue -> Deep Blue
+            file: 'data/flood.json', title: "Flood Risk", desc: "Based on hydrological patterns and historical inundation. High risk concentrated near river banks.", colors: ['#e1f5fe', '#4fc3f7', '#039be5', '#01579b'] 
         },
         'drought': { 
-            file: 'data/drought.json', 
-            title: "Drought Risk Map", 
-            desc: "<b>Overview:</b> Highlights blocks prone to water scarcity and agricultural drought. The risk is driven by rainfall variability and land characteristics, particularly in Southern blocks which show higher susceptibility to vegetative stress.", 
-            colors: ['#fffde7', '#fff176', '#ffb74d', '#e65100'] // Pale Yellow -> Dark Orange
+            file: 'data/drought.json', title: "Drought Risk", desc: "Agricultural vulnerability and water scarcity. Southern blocks show higher susceptibility.", colors: ['#fffde7', '#fff176', '#ffb74d', '#e65100'] 
         },
         'heat': { 
-            file: 'data/heatwave.json', 
-            title: "Heatwave Risk Map", 
-            desc: "<b>Data (2013-2023):</b> Captures Land Surface Temperature (LST) anomalies over a decade. Shows blocks experiencing the most frequent and severe heat stress, typically correlating with built-up urban areas and rocky terrain.", 
-            colors: ['#fff3e0', '#ff8a65', '#d84315', '#bf360c'] // Orange -> Dark Red
+            file: 'data/heatwave.json', title: "Heatwave Risk", desc: "Land Surface Temperature (LST) anomalies (2013-2023). Urban and rocky areas are hotspots.", colors: ['#fff3e0', '#ff8a65', '#d84315', '#bf360c'] 
         },
         'lightning': { 
-            file: 'data/lightning.json', 
-            title: "Lightning Risk Map", 
-            desc: "<b>Data (2022-2025):</b> Displays lightning-related fatalities by block. This map helps identify high-risk clusters requiring early warning systems and community safety interventions.", 
-            colors: ['#f1f8e9', '#aed581', '#558b2f', '#33691e'] // Light Green -> Dark Green
+            file: 'data/lightning.json', title: "Lightning Risk", desc: "Based on fatality density (2022-2025). Identifies clusters requiring early warning coverage.", colors: ['#f1f8e9', '#aed581', '#558b2f', '#33691e'] 
         },
         'quake': { 
-            file: 'data/earthquake.json', 
-            title: "Earthquake Risk Map", 
-            desc: "<b>Geology:</b> Influenced by major formations such as alluvium, gneiss, and granite. The map categorizes blocks based on seismic hazard, fault proximity, and the presence of weak vulnerable structures.", 
-            colors: ['#f3e5f5', '#ce93d8', '#8e24aa', '#4a148c'] // Lavender -> Deep Purple
+            file: 'data/earthquake.json', title: "Earthquake Risk", desc: "Seismic hazard zones influenced by fault proximity and geological formations.", colors: ['#f3e5f5', '#ce93d8', '#8e24aa', '#4a148c'] 
         },
         'fire': { 
-            file: 'data/fire.json', 
-            title: "Fire Risk Map", 
-            desc: "<b>Drivers:</b> Susceptibility is influenced by vegetation dryness, crop residue burning, and densely populated built-up areas. Southern blocks often show elevated fire risk due to forest proximity.", 
-            colors: ['#fff7bc', '#fec44f', '#d95f0e', '#993404'] // Yellow -> Brown/Red
+            file: 'data/fire.json', title: "Fire Risk", desc: "Susceptibility based on vegetation dryness and proximity to forests.", colors: ['#fff7bc', '#fec44f', '#d95f0e', '#993404'] 
         }
     };
 
-    // --- 2. SETUP MAP ---
-    // Satellite Basemap for Context
-    var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles © Esri',
-        opacity: 0.9
-    });
-
-    var map = L.map('map', {
-        center: [24.7914, 85.0002],
-        zoom: 10,
-        layers: [satellite],
-        zoomControl: false
-    });
+    // --- 2. MAP SETUP ---
+    var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri', opacity: 0.9 });
+    var map = L.map('map', { center: [24.7914, 85.0002], zoom: 10, layers: [satellite], zoomControl: false });
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Permanent District Boundary (Reference)
+    // Reference Boundary (Always visible)
     var refLayer = L.geoJson(null, {
         style: { color: '#ffffff', weight: 2, fillOpacity: 0, opacity: 0.6, dashArray: '5, 5' },
         interactive: false
     }).addTo(map);
 
     // --- 3. DATA LOGIC ---
-    var appState = {
-        activeKey: 'multi',
-        activeBlock: null,
-        data: {},
-        currentLayer: null
-    };
+    var appState = { activeKey: 'multi', activeBlock: null, data: {}, currentLayer: null };
 
     function init() {
         var promises = Object.keys(config).map(key => 
@@ -244,74 +179,82 @@
             .then(r => r.ok ? r.json() : null)
             .then(json => {
                 if(json) {
+                    // 1. Detect Value Column
                     var col = detectColumn(json.features[0].properties, key);
+                    
+                    // 2. Pre-process Data
                     json.features.forEach(f => {
                         f.properties._cleanVal = parseValue(f.properties[col]);
-                        f.properties._blockName = normalizeName(f.properties);
+                        f.properties._cleanName = normalizeName(f.properties);
                     });
+
                     appState.data[key] = { json: json, col: col };
-                    
-                    // Use Multi-hazard for the permanent boundary
                     if(key === 'multi') refLayer.addData(json);
                 }
             })
         );
 
         Promise.all(promises).then(() => {
-            console.log("All data loaded.");
             populateDropdown();
-            setMode('multi'); // Initial Load
+            setMode('multi');
         });
     }
 
-    // ROBUST Name Detection (Fixes missing names)
-    function normalizeName(props) {
-        var keys = Object.keys(props);
-        var search = ['block_name', 'c.d.block', 'block', 'name', 'dist_name'];
-        
-        for (let s of search) {
-            let found = keys.find(k => k.toLowerCase() === s || k.toLowerCase().includes(s));
-            if (found) return props[found];
-        }
-        return "Unknown Block";
-    }
-
-    // Value Detection
+    // --- INTELLIGENT COLUMN DETECTION ---
     function detectColumn(props, type) {
         var keys = Object.keys(props);
-        var ignore = ['objectid', 'fid', 'shape_length', 'shape_area', 'id', 'uid'];
         
-        // Priority for MultiHazard Scores
-        if(type === 'multi') {
-            let score = keys.find(k => k.toLowerCase().includes('score') || k.toLowerCase().includes('risk'));
-            if(score) return score;
+        // SCAN VALUES: Look for keys that contain specific Risk Text
+        var riskKeywords = ["Very High", "High", "Moderate", "Low", "Low-Moderate", "Moderate-High"];
+        
+        for (let k of keys) {
+            let val = props[k];
+            if (typeof val === 'string' && riskKeywords.includes(val)) {
+                return k; // Found the column containing "Moderate", "High", etc.
+            }
         }
 
-        // Find first numeric column
+        // Fallback: Look for numeric columns (excluding IDs)
+        var ignore = ['objectid', 'fid', 'shape_length', 'shape_area', 'id', 'uid'];
         for(let k of keys) {
             if(typeof props[k] === 'number' && !ignore.includes(k.toLowerCase())) return k;
         }
+
         return keys[0];
     }
 
+    // --- VALUE PARSER (Handles Text & Numbers) ---
     function parseValue(v) {
         if(typeof v === 'string') {
-            v = v.toLowerCase();
-            if(v.includes('very high')) return 5;
-            if(v.includes('high')) return 4;
-            if(v.includes('mod')) return 3;
-            if(v.includes('low')) return 2;
-            return 1;
+            var s = v.toLowerCase();
+            if(s.includes('very high')) return 6;
+            if(s === 'high') return 5;
+            if(s.includes('mod') && s.includes('high')) return 4; // Moderate-High
+            if(s === 'moderate' || s === 'mod') return 3;
+            if(s.includes('low') && s.includes('mod')) return 2; // Low-Moderate
+            if(s.includes('low')) return 1;
+            return 0;
         }
         return parseFloat(v) || 0;
+    }
+
+    // --- NAME NORMALIZER (Fuzzy Matcher) ---
+    function normalizeName(props) {
+        var keys = Object.keys(props);
+        var search = ['block_name', 'c.d.block', 'block', 'name', 'blocks'];
+        
+        for (let s of search) {
+            let found = keys.find(k => k.toLowerCase() === s);
+            if (found) return props[found].trim();
+        }
+        return "Unknown";
     }
 
     // --- 4. RENDERER ---
     function setMode(key) {
         appState.activeKey = key;
-        document.getElementById('hazardDropdown').value = key;
-
-        // UI Updates
+        
+        // Update UI
         document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
         var btn = document.querySelector(`.layer-btn[onclick*="'${key}'"]`);
         if(btn) btn.classList.add('active');
@@ -329,58 +272,52 @@
         if(appState.currentLayer) map.removeLayer(appState.currentLayer);
         document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('info-panel').style.display = 'none';
-        
-        // Reset View
         map.setView([24.7914, 85.0002], 10);
-        
-        // Add labels to Reference Layer temporarily for context
-        refLayer.eachLayer(l => {
-            l.bindTooltip(l.feature.properties._blockName, { 
-                permanent: true, direction: "center", className: "ref-label" 
-            });
-        });
     }
 
     function renderMap() {
         if(appState.currentLayer) map.removeLayer(appState.currentLayer);
-        
-        // Remove clear map labels if they exist
-        refLayer.eachLayer(l => l.unbindTooltip());
 
         var dataset = appState.data[appState.activeKey];
         if(!dataset) return;
 
-        // Calculate Range for Colors
+        // Calc Range
         var vals = dataset.json.features.map(f => f.properties._cleanVal);
         var min = Math.min(...vals);
         var max = Math.max(...vals);
-        if(min === max) { min=0; max=5; }
+        if(min === max) { min=0; max=6; }
 
         appState.currentLayer = L.geoJson(dataset.json, {
             style: function(feature) {
-                var bName = feature.properties._blockName;
-                var isFocusMode = (appState.activeBlock !== null);
-                var isTarget = (appState.activeBlock === bName);
+                var bName = feature.properties._cleanName;
+                var isFocus = (appState.activeBlock !== null);
                 
+                // Fuzzy Match for Block Name (ignores case/spaces)
+                var isTarget = false;
+                if (isFocus && appState.activeBlock) {
+                    isTarget = (bName.toLowerCase() === appState.activeBlock.toLowerCase());
+                }
+
                 var baseColor = getColor(feature.properties._cleanVal, min, max, config[appState.activeKey].colors);
 
-                if(isFocusMode) {
+                if(isFocus) {
                     if(isTarget) {
-                        return { fillColor: baseColor, weight: 3, color: 'var(--accent)', fillOpacity: 0.8, opacity: 1 };
+                        // SELECTED: Full Color, High Opacity
+                        return { fillColor: baseColor, weight: 3, color: 'var(--accent)', fillOpacity: 0.9, opacity: 1 };
                     } else {
-                        // Ghost Mode
-                        return { fillColor: baseColor, weight: 0.5, color: '#444', fillOpacity: 0.1, opacity: 0.1 };
+                        // OTHERS: Ghosted (Transparent)
+                        return { fillColor: baseColor, weight: 0.5, color: '#555', fillOpacity: 0.1, opacity: 0.1 };
                     }
                 } else {
-                    // Standard District View
+                    // NORMAL VIEW
                     return { fillColor: baseColor, weight: 1, color: '#fff', fillOpacity: 0.75, opacity: 1 };
                 }
             },
             onEachFeature: function(feature, layer) {
-                var bName = feature.properties._blockName;
+                var bName = feature.properties._cleanName;
                 
-                // Label Logic: Only show name if focused or on hover
-                if(appState.activeBlock === bName) {
+                // Labels
+                if(appState.activeBlock && bName.toLowerCase() === appState.activeBlock.toLowerCase()) {
                     layer.bindTooltip(bName, { permanent: true, direction: "center", className: "focus-label" });
                 } else {
                     layer.bindTooltip(bName, { sticky: true });
@@ -388,17 +325,19 @@
 
                 layer.on('click', function() {
                     appState.activeBlock = bName;
-                    document.getElementById('blockDropdown').value = bName;
+                    document.getElementById('blockDropdown').value = bName; // Sync Dropdown
                     renderMap();
                 });
             }
         }).addTo(map);
 
-        // Zoom/Fly Logic
+        // Zoom to Block
         if(appState.activeBlock) {
-            var target = appState.currentLayer.getLayers().find(l => l.feature.properties._blockName === appState.activeBlock);
+            var target = appState.currentLayer.getLayers().find(l => 
+                l.feature.properties._cleanName.toLowerCase() === appState.activeBlock.toLowerCase()
+            );
             if(target) {
-                map.flyTo(target.getBounds().getCenter(), 11, { duration: 1.5 });
+                map.flyTo(target.getBounds().getCenter(), 11, { duration: 1.0 });
             }
         }
     }
@@ -420,18 +359,15 @@
     }
 
     function populateDropdown() {
-        // Wait for data, then find any valid dataset
-        var keys = Object.keys(appState.data);
-        if(keys.length === 0) return;
-        
-        // Use Multi-hazard or first available
-        var src = appState.data['multi'] ? appState.data['multi'] : appState.data[keys[0]];
-        
-        var names = src.json.features.map(f => f.properties._blockName).sort();
+        // Find best source for names
+        var src = appState.data['multi'] || appState.data[Object.keys(appState.data)[0]];
+        if(!src) return;
+
+        var names = src.json.features.map(f => f.properties._cleanName).sort();
         names = [...new Set(names)]; // Unique
         
         var sel = document.getElementById('blockDropdown');
-        sel.innerHTML = '<option value="">-- Select Block to Focus --</option>'; // Reset
+        sel.innerHTML = '<option value="">-- View All Blocks --</option>';
         
         names.forEach(n => {
             var opt = document.createElement('option');
@@ -441,7 +377,6 @@
         });
     }
 
-    // Start
     init();
 
 </script>
