@@ -28,9 +28,9 @@
         .brand h1 { font-family: 'Roboto Slab', serif; font-size: 1.4rem; margin: 0; color: #fff; letter-spacing: 0.5px; }
         .tag { background: var(--accent); color: #000; font-weight: 800; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; }
         
-        /* LOGO STYLING */
-        .logos { display: flex; gap: 15px; align-items: center; }
-        .logos img { height: 50px; border-radius: 2px; background: #fff; padding: 2px; }
+        /* LOGO STYLING - Updated for single logo */
+        .logos { display: flex; align-items: center; }
+        .logos img { height: 55px; border-radius: 4px; background: #fff; padding: 4px; }
 
         /* LAYOUT */
         .container { display: flex; flex: 1; height: calc(100vh - 70px); }
@@ -76,18 +76,13 @@
 
 <header>
     <div class="brand">
-        <!-- Changed Icon to Shield for BSDMA feel -->
         <i class="fas fa-shield-alt fa-lg" style="color:var(--accent)"></i>
         <div><h1>Gaya Risk Atlas</h1></div>
         <span class="tag">v14.0</span>
     </div>
     <div class="logos">
-        <!-- 1. Bihar Govt Seal (Using Wikimedia Link, better to use local file) -->
-        <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Seal_of_Bihar.png" alt="Govt of Bihar">
-        
-        <!-- 2. BSDMA Logo -->
-        <!-- INSTRUCTION: Ensure the file 'bsdma_logo.png' is in an 'images' folder or update this path -->
-        <img src="images/bsdma_logo.png" alt="BSDMA" onerror="this.style.display='none'">
+        <!-- ONLY BSDMA LOGO -->
+        <img src="images/bsdma_logo.png" alt="BSDMA">
     </div>
 </header>
 
