@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gaya Risk Atlas v14.0 - Boundary Cut Mode</title>
+    <title>Gaya Risk Atlas v14.0 - BSDMA</title>
     
+    <!-- External Dependencies (CDNs) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Roboto+Slab:wght@700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -22,14 +23,17 @@
         body { margin: 0; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; height: 100vh; background: var(--bg-dark); color: var(--text-main); overflow: hidden; }
         
         /* HEADER */
-        header { background: #111; height: 60px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--accent); z-index: 2000; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+        header { background: #111; height: 70px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--accent); z-index: 2000; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
         .brand { display: flex; align-items: center; gap: 12px; }
-        .brand h1 { font-family: 'Roboto Slab', serif; font-size: 1.25rem; margin: 0; color: #fff; letter-spacing: 0.5px; }
+        .brand h1 { font-family: 'Roboto Slab', serif; font-size: 1.4rem; margin: 0; color: #fff; letter-spacing: 0.5px; }
         .tag { background: var(--accent); color: #000; font-weight: 800; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; }
-        .logos img { height: 38px; margin-left: 12px; border-radius: 2px; background: rgba(255,255,255,0.05); padding: 2px; }
+        
+        /* LOGO STYLING */
+        .logos { display: flex; gap: 15px; align-items: center; }
+        .logos img { height: 50px; border-radius: 2px; background: #fff; padding: 2px; }
 
         /* LAYOUT */
-        .container { display: flex; flex: 1; height: calc(100vh - 60px); }
+        .container { display: flex; flex: 1; height: calc(100vh - 70px); }
         .sidebar { width: 400px; background: var(--panel-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 1000; overflow-y: auto; box-shadow: 4px 0 20px rgba(0,0,0,0.3); }
         .sidebar-pad { padding: 24px; }
 
@@ -72,13 +76,18 @@
 
 <header>
     <div class="brand">
-        <i class="fas fa-globe-asia fa-lg" style="color:var(--accent)"></i>
+        <!-- Changed Icon to Shield for BSDMA feel -->
+        <i class="fas fa-shield-alt fa-lg" style="color:var(--accent)"></i>
         <div><h1>Gaya Risk Atlas</h1></div>
         <span class="tag">v14.0</span>
     </div>
     <div class="logos">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Seal_of_Bihar.png" alt="Bihar">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/United_Nations_Development_Programme_logo.svg/1200px-United_Nations_Development_Programme_logo.svg.png" alt="UNDP">
+        <!-- 1. Bihar Govt Seal (Using Wikimedia Link, better to use local file) -->
+        <img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Seal_of_Bihar.png" alt="Govt of Bihar">
+        
+        <!-- 2. BSDMA Logo -->
+        <!-- INSTRUCTION: Ensure the file 'bsdma_logo.png' is in an 'images' folder or update this path -->
+        <img src="images/bsdma_logo.png" alt="BSDMA" onerror="this.style.display='none'">
     </div>
 </header>
 
@@ -162,17 +171,14 @@
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     // --- 3. LAYERS & PANES ---
-    // We use panes to ensure layers stack in the correct order:
-    // Hazard Data < Mask (Blackout) < Reference Labels
-    
     map.createPane('hazardPane');
     map.getPane('hazardPane').style.zIndex = 400;
 
-    map.createPane('maskPane'); // The blackout layer
+    map.createPane('maskPane'); 
     map.getPane('maskPane').style.zIndex = 500;
-    map.getPane('maskPane').style.pointerEvents = 'none'; // Click through the mask
+    map.getPane('maskPane').style.pointerEvents = 'none';
 
-    map.createPane('highlightPane'); // The cyan border of selected block
+    map.createPane('highlightPane'); 
     map.getPane('highlightPane').style.zIndex = 550;
     map.getPane('highlightPane').style.pointerEvents = 'none';
 
@@ -180,12 +186,10 @@
     map.getPane('refPane').style.zIndex = 620; 
     map.getPane('refPane').style.pointerEvents = 'none';
 
-    // Global variables for dynamic layers
     var currentHazardLayer = null;
     var currentMaskLayer = null;
     var currentHighlightLayer = null;
 
-    // The reference dashed lines
     var refLayer = L.geoJson(null, {
         style: { color: 'rgba(255,255,255,0.5)', weight: 1.5, fillOpacity: 0, dashArray: '4, 4' },
         pane: 'refPane',
@@ -197,24 +201,17 @@
     }).addTo(map);
 
     // --- 4. DATA LOGIC ---
-    var appState = { 
-        activeKey: 'multi', 
-        activeBlock: null, 
-        data: {}, 
-        blockGeo: null // Store raw block data here
-    };
+    var appState = { activeKey: 'multi', activeBlock: null, data: {}, blockGeo: null };
 
     function init() {
-        // Load Blocks
         fetch('data/blocks.json').then(r => r.ok ? r.json() : null).then(json => {
             if(json) { 
-                appState.blockGeo = json; // Save fully for masking later
+                appState.blockGeo = json; 
                 refLayer.addData(json); 
                 populateDropdown(json); 
             }
         });
 
-        // Load Hazards
         var promises = Object.keys(config).map(key => 
             fetch(config[key].file).then(r => r.ok ? r.json() : null).then(json => {
                 if(json) {
@@ -268,18 +265,13 @@
     }
 
     // --- 5. RENDER LOGIC ---
-
     function setMode(key) {
         appState.activeKey = key;
-        
-        // Update Buttons
         document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
         var btn = document.querySelector(`.layer-btn[onclick*="'${key}'"]`);
         if(btn) btn.classList.add('active');
-        
         updateLegend();
-        renderHazardLayer(); // Only renders the data
-        // Mask stays if block is selected
+        renderHazardLayer(); 
     }
 
     function focusBlock(blockName) {
@@ -301,7 +293,6 @@
         map.setView([24.7914, 85.0002], 10);
     }
 
-    // Render the Hazard Data (Always the full district)
     function renderHazardLayer() {
         if(currentHazardLayer) map.removeLayer(currentHazardLayer);
 
@@ -314,43 +305,30 @@
         if(min === max) { min=0; max=6; }
 
         currentHazardLayer = L.geoJson(dataset.json, {
-            pane: 'hazardPane', // Sits at bottom
+            pane: 'hazardPane', 
             style: function(feature) {
                 var baseColor = getColor(feature.properties._cleanVal, min, max, config[appState.activeKey].colors);
-                return { 
-                    fillColor: baseColor, 
-                    weight: 0.5, 
-                    color: baseColor, // match border to fill to reduce artifacts
-                    fillOpacity: 0.85 
-                };
+                return { fillColor: baseColor, weight: 0.5, color: baseColor, fillOpacity: 0.85 };
             }
         }).addTo(map);
     }
 
-    // The Magic: Create a World Polygon with a hole for the selected block
     function renderMaskAndHighlight() {
-        // Remove existing mask/highlight
         if(currentMaskLayer) map.removeLayer(currentMaskLayer);
         if(currentHighlightLayer) map.removeLayer(currentHighlightLayer);
 
         if(!appState.activeBlock || !appState.blockGeo) {
-            // If no block selected, just reset view
             map.flyTo([24.7914, 85.0002], 10);
             return;
         }
 
-        // 1. Find the selected block geometry
         var blockFeature = appState.blockGeo.features.find(f => {
             return normalizeName(f.properties) === appState.activeBlock;
         });
 
         if(!blockFeature) return;
 
-        // 2. Create the Mask (Inverted Polygon)
-        // A large rectangle covering the world
         var worldCoords = [[[-180, 90], [-180, -90], [180, -90], [180, 90], [-180, 90]]];
-        
-        // Extract holes (the block shape)
         var holes = [];
         if (blockFeature.geometry.type === "Polygon") {
             holes.push(blockFeature.geometry.coordinates[0]);
@@ -358,38 +336,21 @@
             blockFeature.geometry.coordinates.forEach(poly => holes.push(poly[0]));
         }
 
-        // Combine World + Holes
         var maskGeoJSON = {
             type: "Feature",
-            geometry: {
-                type: "Polygon",
-                coordinates: [...worldCoords, ...holes]
-            }
+            geometry: { type: "Polygon", coordinates: [...worldCoords, ...holes] }
         };
 
-        // Render Blackout Mask
         currentMaskLayer = L.geoJSON(maskGeoJSON, {
             pane: 'maskPane',
-            style: {
-                fillColor: '#000', // Blackout
-                fillOpacity: 0.9,  // 90% opacity (visible but dark)
-                color: 'transparent',
-                weight: 0
-            }
+            style: { fillColor: '#000', fillOpacity: 0.9, color: 'transparent', weight: 0 }
         }).addTo(map);
 
-        // 3. Render Cyan Border for the Block (Highlight)
         currentHighlightLayer = L.geoJSON(blockFeature, {
             pane: 'highlightPane',
-            style: {
-                fillColor: 'transparent',
-                color: '#00e5ff', // Cyan
-                weight: 3,
-                opacity: 1
-            }
+            style: { fillColor: 'transparent', color: '#00e5ff', weight: 3, opacity: 1 }
         }).addTo(map);
 
-        // 4. Zoom to block
         var bounds = L.geoJSON(blockFeature).getBounds();
         map.flyTo(bounds.getCenter(), 11.5, { duration: 1.0 });
     }
@@ -427,7 +388,6 @@
     }
 
     init();
-
 </script>
 </body>
 </html>
