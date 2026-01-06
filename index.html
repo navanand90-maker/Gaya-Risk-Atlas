@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gaya Risk Atlas v14.0 - High Contrast Spotlight</title>
+    <title>Gaya Risk Atlas v14.0 - Boundary Cut Mode</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Roboto+Slab:wght@700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -161,11 +161,31 @@
     L.control.layers({ "Satellite": satellite, "Dark Canvas": dark, "Light Canvas": light }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // --- 3. REFERENCE LAYER ---
+    // --- 3. LAYERS & PANES ---
+    // We use panes to ensure layers stack in the correct order:
+    // Hazard Data < Mask (Blackout) < Reference Labels
+    
+    map.createPane('hazardPane');
+    map.getPane('hazardPane').style.zIndex = 400;
+
+    map.createPane('maskPane'); // The blackout layer
+    map.getPane('maskPane').style.zIndex = 500;
+    map.getPane('maskPane').style.pointerEvents = 'none'; // Click through the mask
+
+    map.createPane('highlightPane'); // The cyan border of selected block
+    map.getPane('highlightPane').style.zIndex = 550;
+    map.getPane('highlightPane').style.pointerEvents = 'none';
+
     map.createPane('refPane');
     map.getPane('refPane').style.zIndex = 620; 
     map.getPane('refPane').style.pointerEvents = 'none';
 
+    // Global variables for dynamic layers
+    var currentHazardLayer = null;
+    var currentMaskLayer = null;
+    var currentHighlightLayer = null;
+
+    // The reference dashed lines
     var refLayer = L.geoJson(null, {
         style: { color: 'rgba(255,255,255,0.5)', weight: 1.5, fillOpacity: 0, dashArray: '4, 4' },
         pane: 'refPane',
@@ -177,12 +197,21 @@
     }).addTo(map);
 
     // --- 4. DATA LOGIC ---
-    var appState = { activeKey: 'multi', activeBlock: null, data: {}, currentLayer: null };
+    var appState = { 
+        activeKey: 'multi', 
+        activeBlock: null, 
+        data: {}, 
+        blockGeo: null // Store raw block data here
+    };
 
     function init() {
         // Load Blocks
         fetch('data/blocks.json').then(r => r.ok ? r.json() : null).then(json => {
-            if(json) { refLayer.addData(json); populateDropdown(json); }
+            if(json) { 
+                appState.blockGeo = json; // Save fully for masking later
+                refLayer.addData(json); 
+                populateDropdown(json); 
+            }
         });
 
         // Load Hazards
@@ -192,7 +221,6 @@
                     var col = detectColumn(json.features[0].properties, key);
                     json.features.forEach(f => {
                         f.properties._cleanVal = parseValue(f.properties[col]);
-                        f.properties._cleanName = normalizeName(f.properties);
                     });
                     appState.data[key] = { json: json, col: col };
                 }
@@ -204,7 +232,6 @@
     // --- HELPERS ---
     function cleanString(str) {
         if(!str) return "";
-        // Extremely aggressive cleaning to ensure matches (e.g. "Gaya Town" == "GayaTownBlock")
         return str.toLowerCase().replace(/[^a-z0-9]/g, '').replace('block', '').replace('cd', '');
     }
 
@@ -241,29 +268,42 @@
     }
 
     // --- 5. RENDER LOGIC ---
+
     function setMode(key) {
         appState.activeKey = key;
+        
+        // Update Buttons
         document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
         var btn = document.querySelector(`.layer-btn[onclick*="'${key}'"]`);
         if(btn) btn.classList.add('active');
+        
         updateLegend();
-        renderMap();
+        renderHazardLayer(); // Only renders the data
+        // Mask stays if block is selected
     }
 
     function focusBlock(blockName) {
         appState.activeBlock = blockName === "" ? null : blockName;
-        renderMap();
+        renderMaskAndHighlight();
     }
 
     function showClearMap() {
-        if(appState.currentLayer) map.removeLayer(appState.currentLayer);
+        if(currentHazardLayer) map.removeLayer(currentHazardLayer);
+        if(currentMaskLayer) map.removeLayer(currentMaskLayer);
+        if(currentHighlightLayer) map.removeLayer(currentHighlightLayer);
+        
         document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('info-panel').style.display = 'none';
+        
+        appState.activeBlock = null;
+        document.getElementById('blockDropdown').value = "";
+        
         map.setView([24.7914, 85.0002], 10);
     }
 
-    function renderMap() {
-        if(appState.currentLayer) map.removeLayer(appState.currentLayer);
+    // Render the Hazard Data (Always the full district)
+    function renderHazardLayer() {
+        if(currentHazardLayer) map.removeLayer(currentHazardLayer);
 
         var dataset = appState.data[appState.activeKey];
         if(!dataset) return;
@@ -273,58 +313,85 @@
         var max = Math.max(...vals);
         if(min === max) { min=0; max=6; }
 
-        appState.currentLayer = L.geoJson(dataset.json, {
+        currentHazardLayer = L.geoJson(dataset.json, {
+            pane: 'hazardPane', // Sits at bottom
             style: function(feature) {
-                var bName = feature.properties._cleanName;
                 var baseColor = getColor(feature.properties._cleanVal, min, max, config[appState.activeKey].colors);
-                
-                // --- HIGH CONTRAST LOGIC ---
-                if (appState.activeBlock) {
-                    var target = cleanString(appState.activeBlock);
-                    var current = cleanString(bName);
+                return { 
+                    fillColor: baseColor, 
+                    weight: 0.5, 
+                    color: baseColor, // match border to fill to reduce artifacts
+                    fillOpacity: 0.85 
+                };
+            }
+        }).addTo(map);
+    }
 
-                    if (target === current || current.includes(target) || target.includes(current)) {
-                        // SELECTED: Bright, High Opacity, Cyan Border
-                        return { 
-                            fillColor: baseColor, 
-                            weight: 3, 
-                            color: '#00e5ff', 
-                            fillOpacity: 0.9, // Very Opaque
-                            opacity: 1 
-                        };
-                    } else {
-                        // NOT SELECTED: Grey, Low Opacity
-                        return { 
-                            fillColor: '#222', // Force Grey to kill distraction
-                            weight: 0.5, 
-                            color: '#444', 
-                            fillOpacity: 0.1, // Ghosted
-                            opacity: 0.1 
-                        };
-                    }
-                } else {
-                    // NO SELECTION: Normal Map
-                    return { fillColor: baseColor, weight: 0, color: 'transparent', fillOpacity: 0.75 };
-                }
-            },
-            onEachFeature: function(feature, layer) {
-                var bName = feature.properties._cleanName;
-                layer.on('click', function() {
-                    appState.activeBlock = bName;
-                    document.getElementById('blockDropdown').value = bName;
-                    renderMap();
-                });
+    // The Magic: Create a World Polygon with a hole for the selected block
+    function renderMaskAndHighlight() {
+        // Remove existing mask/highlight
+        if(currentMaskLayer) map.removeLayer(currentMaskLayer);
+        if(currentHighlightLayer) map.removeLayer(currentHighlightLayer);
+
+        if(!appState.activeBlock || !appState.blockGeo) {
+            // If no block selected, just reset view
+            map.flyTo([24.7914, 85.0002], 10);
+            return;
+        }
+
+        // 1. Find the selected block geometry
+        var blockFeature = appState.blockGeo.features.find(f => {
+            return normalizeName(f.properties) === appState.activeBlock;
+        });
+
+        if(!blockFeature) return;
+
+        // 2. Create the Mask (Inverted Polygon)
+        // A large rectangle covering the world
+        var worldCoords = [[[-180, 90], [-180, -90], [180, -90], [180, 90], [-180, 90]]];
+        
+        // Extract holes (the block shape)
+        var holes = [];
+        if (blockFeature.geometry.type === "Polygon") {
+            holes.push(blockFeature.geometry.coordinates[0]);
+        } else if (blockFeature.geometry.type === "MultiPolygon") {
+            blockFeature.geometry.coordinates.forEach(poly => holes.push(poly[0]));
+        }
+
+        // Combine World + Holes
+        var maskGeoJSON = {
+            type: "Feature",
+            geometry: {
+                type: "Polygon",
+                coordinates: [...worldCoords, ...holes]
+            }
+        };
+
+        // Render Blackout Mask
+        currentMaskLayer = L.geoJSON(maskGeoJSON, {
+            pane: 'maskPane',
+            style: {
+                fillColor: '#000', // Blackout
+                fillOpacity: 0.9,  // 90% opacity (visible but dark)
+                color: 'transparent',
+                weight: 0
             }
         }).addTo(map);
 
-        if(appState.activeBlock) {
-            var targetLayer = appState.currentLayer.getLayers().find(l => {
-                var b = cleanString(l.feature.properties._cleanName);
-                var t = cleanString(appState.activeBlock);
-                return b === t || b.includes(t) || t.includes(b);
-            });
-            if(targetLayer) map.flyTo(targetLayer.getBounds().getCenter(), 11.5, { duration: 1.0 });
-        }
+        // 3. Render Cyan Border for the Block (Highlight)
+        currentHighlightLayer = L.geoJSON(blockFeature, {
+            pane: 'highlightPane',
+            style: {
+                fillColor: 'transparent',
+                color: '#00e5ff', // Cyan
+                weight: 3,
+                opacity: 1
+            }
+        }).addTo(map);
+
+        // 4. Zoom to block
+        var bounds = L.geoJSON(blockFeature).getBounds();
+        map.flyTo(bounds.getCenter(), 11.5, { duration: 1.0 });
     }
 
     function getColor(val, min, max, palette) {
